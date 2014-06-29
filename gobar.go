@@ -1,16 +1,16 @@
 // gobar
 // Copyright (C) 2014 Karol 'Kenji Takahashi' Woźniak
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
 // to deal in the Software without restriction, including without limitation
 // the rights to use, copy, modify, merge, publish, distribute, sublicense,
 // and/or sell copies of the Software, and to permit persons to whom the
 // Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included
 // in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
 // OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -43,12 +43,15 @@ import (
 	"github.com/docopt/docopt-go"
 )
 
+// fatal is a helper function to call when something terribly wrong
+// might happen. Logs given error and terminates application.
 func fatal(err error) {
 	if err != nil {
 		log.Panic(err)
 	}
 }
 
+// Position defines bar placement on the screen.
 type Position uint8
 
 const (
@@ -56,12 +59,15 @@ const (
 	TOP    Position = iota
 )
 
+// Font stores font definition along with it's loaded truetype struct.
 type Font struct {
 	Path string
 	Size float64
 	Font *truetype.Font
 }
 
+// NewFont opens a font file and parses it with truetype engine.
+// TODO(Kenji): Fallback when path doesn't exist.
 func NewFont(path string, size float64) *Font {
 	fontReader, err := os.Open(path)
 	fatal(err)
@@ -70,6 +76,7 @@ func NewFont(path string, size float64) *Font {
 	return &Font{path, size, font}
 }
 
+// Geometry stores bars geometry on the screen (or actually monitor).
 type Geometry struct {
 	Width  uint16
 	Height uint16
@@ -77,12 +84,15 @@ type Geometry struct {
 	Y      uint16
 }
 
+// NewGeometry parses geometry from textual definition.
+// Input should be formatted as <width>x<height>+<x>+<y>.
+// A special "M" value is allowed as <width>, to represent 100%.
 func NewGeometry(
 	geostr string, head xrect.Rect, position Position,
 ) *Geometry {
 	geometry := Geometry{}
 	var widthS string
-	_, parserr := fmt.Sscanf(
+	_, err := fmt.Sscanf(
 		geostr, "%1sx%d+%d+%d",
 		&widthS, &geometry.Height, &geometry.X, &geometry.Y,
 	)
@@ -91,9 +101,8 @@ func NewGeometry(
 
 	hwidth := uint16(head.Width())
 	hheight := uint16(head.Height())
-	if parserr != nil {
-		//TODO: Better logging
-		log.Print("wrong geometry")
+	if err != nil {
+		log.Print("bad geometry, ", geometry, ", using default")
 		geometry.Width = hwidth - (geometry.X - uint16(head.X()))
 		geometry.Height = 16
 	} else {
@@ -116,6 +125,7 @@ func NewGeometry(
 	return &geometry
 }
 
+// Bar stores and manages all X related stuff and configuration.
 type Bar struct {
 	X          *xgbutil.XUtil
 	Windows    []*xwindow.Window
@@ -126,6 +136,8 @@ type Bar struct {
 	Fonts      []*Font
 }
 
+// NewBar creates X windows for every monitor.
+// Also sets proper EWMH information for docked windows.
 func NewBar(
 	X *xgbutil.XUtil, geometries []*Geometry, position Position,
 	fg uint64, bg uint64, fonts []*Font,
@@ -173,6 +185,7 @@ func NewBar(
 	}
 }
 
+// Draw draws TextPieces into X monitors.
 func (self *Bar) Draw(text []*TextPiece) {
 	imgs := make([]*xgraphics.Image, len(self.Windows))
 	for i, geometry := range self.Geometries {
@@ -233,6 +246,8 @@ func (self *Bar) Draw(text []*TextPiece) {
 	}
 }
 
+// main gets command line arguments, creates X connection and initializes Bar.
+// This is also where X event loop and Stdin reading lies.
 func main() {
 	cli := `gobar.
 
@@ -243,7 +258,6 @@ Usage:
 
 Options:
   -h --help              Show this screen.
-  --version              Show version.
   --bottom               Place bar at the bottom of the screen.
   --geometry=<GEOMETRY>  Comma separated list of monitor geometries in form of
                          <w>x<h>+<x>+<y>. If not specified, uses Mx16+0+0 for each screen.
@@ -254,7 +268,7 @@ Options:
   --bg=<COLOR>           Background color (0xAARRGGBB) [default: 0xFF000000].
 	`
 
-	arguments, err := docopt.Parse(cli, nil, true, "gobar 0.1", false)
+	arguments, err := docopt.Parse(cli, nil, true, "", false)
 	fatal(err)
 	fgColor, err := strconv.ParseUint(arguments["--fg"].(string), 0, 32)
 	fatal(err)

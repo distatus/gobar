@@ -1,16 +1,16 @@
 // gobar
 // Copyright (C) 2014 Karol 'Kenji Takahashi' Woźniak
-// 
+//
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
 // to deal in the Software without restriction, including without limitation
 // the rights to use, copy, modify, merge, publish, distribute, sublicense,
 // and/or sell copies of the Software, and to permit persons to whom the
 // Software is furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included
 // in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
 // OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -32,10 +32,14 @@ import (
 	"github.com/BurntSushi/xgbutil/xgraphics"
 )
 
+// Type EndScan is an artifical Error.
+// Raised when parser should stop scanning.
 type EndScan struct{}
 
 func (e EndScan) Error() string { return "EndScan" }
 
+// NewBGRA returns a new color definition in X compatible format.
+// Input should be a hexagonal representation with alpha, i.e 0xAARRGGBB.
 func NewBGRA(color uint64) *xgraphics.BGRA {
 	a := uint8(color >> 24)
 	r := uint8((color & 0x00ff0000) >> 16)
@@ -44,6 +48,8 @@ func NewBGRA(color uint64) *xgraphics.BGRA {
 	return &xgraphics.BGRA{B: b, G: g, R: r, A: a}
 }
 
+// TextPiece stores formatting information for a text
+// within single pair of brackets.
 type TextPiece struct {
 	Text       string
 	Font       uint
@@ -52,14 +58,19 @@ type TextPiece struct {
 	Screens    []uint
 }
 
+// TextParser is used to create a set of TextPieces from a textual definition.
 type TextParser struct {
 	rgbPattern *regexp.Regexp
 }
 
+// NewTextParser creates TextParser instance with
+// correct necessary regexp definitions.
 func NewTextParser() *TextParser {
 	return &TextParser{regexp.MustCompile(`^0[xX][0-9a-fA-F]{8}$`)}
 }
 
+// Tokenize turns textual definition into a series of valid tokens.
+// If no valid token is found at given place, char a 0 position if returned.
 func (self *TextParser) Tokenize(
 	data []byte, EOF bool,
 ) (advance int, token []byte, err error) {
@@ -97,7 +108,9 @@ func (self *TextParser) Tokenize(
 	return
 }
 
-// TODO: Escaping
+// Scan scans textual definition and returns array of TextPieces.
+// Possible empty pieces are omitted in the returned array.
+// TODO(Kenji): Escaping
 func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 	var text []*TextPiece
 
@@ -188,7 +201,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 		}
 	}
 
-	//Remove empty pieces. TODO: Merge with main parser
+	//Remove empty pieces. TODO(Kenji): Merge with main parser
 	var text2 []*TextPiece
 	for _, piece := range text {
 		if piece.Text != "" {
