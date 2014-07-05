@@ -216,7 +216,7 @@ func (self *Bar) Draw(text []*TextPiece) {
 			}
 		}
 
-		for i, screen := range screens {
+		for _, screen := range screens {
 			subimg := imgs[screen].SubImage(image.Rect(
 				xs[screen], 0,
 				xs[screen] + width, int(self.Geometries[screen].Height),
@@ -231,8 +231,7 @@ func (self *Bar) Draw(text []*TextPiece) {
 				log.Print(err) // TODO: Better logging
 			}
 
-			subimg.XDraw()
-			subimg.XPaint(self.Windows[i].Id)
+			subimg.XPaint(self.Windows[screen].Id)
 			subimg.Destroy()
 		}
 	}
@@ -328,9 +327,11 @@ Options:
 		}
 	}()
 
-	_, _, pingQuit := xevent.MainPing(X)
+	pingBefore, pingAfter, pingQuit := xevent.MainPing(X)
 	for {
 		select {
+		case <-pingBefore:
+			<-pingAfter
 		case text := <-stdin:
 			bar.Draw(text)
 		case <-pingQuit:
