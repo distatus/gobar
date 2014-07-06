@@ -205,7 +205,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 		}
 	}
 
-	//Remove empty pieces. TODO(Kenji): Merge with main parser
+	//Remove possible empty pieces.
 	var text2 []*TextPiece
 	for _, piece := range text {
 		if piece.Text != "" {
