@@ -4,6 +4,18 @@
 
 Supports xinerama, EWMH, font antialiasing and possibly some other fancy looking names and shortcuts.
 
+## installation
+
+First, you have to [get Go](http://golang.org/doc/install).
+
+Then, just
+
+```bash
+$ go get github.com/KenjiTakahashi/gobar
+```
+
+should get you going.
+
 ## usage
 
 Command line options reference follows:
@@ -28,7 +40,7 @@ Defaults to `/usr/share/fonts/TTF/LiberationMono-Regular.ttf:12`. Which is proba
 
 **--bg=** takes main background color. Should be in form `0xAARRGGBB`.
 
-Other than that, an input string should be piped into the **gobar** exectuable.
+Other than that, an input string should be piped into the **gobar** executable.
 
 A really simple example could be displaying current date and time.
 ```bash
@@ -41,10 +53,12 @@ Special tokens can also be used in the input string to allow nice formatting.
 
 Each token should be preceded with `{` and will be active until `}`.
 
-**F&lt;num&gt;** sets active font, **&lt;num&gt;** should be an index as specified in **--fonts=**.
+**F&lt;num&gt;** sets active font, **&lt;num&gt;** should be index of one of the elements from fonts list specified in **--fonts=**.
 
-**S&lt;num&gt;,&lt;num&gt;...** specifies monitors to draw on. Multiple, comma separated, numbers can be specified.
+**S&lt;num&gt;,&lt;num&gt;...** specifies monitors to draw on. Multiple, comma separated, numbers can be specified. If not specified, draws to all available monitors.
 
 **CF0xAARRGGBB** sets active foreground color.
 
 **CB0xAARRGGBB** sets active background color.
+
+**AR** aligns next text piece to the right.
