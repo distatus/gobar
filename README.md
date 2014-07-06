@@ -6,7 +6,7 @@ Supports xinerama, EWMH, font antialiasing and possibly some other fancy looking
 
 ## installation
 
-First, you have to [get Go](http://golang.org/doc/install).
+First, you have to [get Go](http://golang.org/doc/install). Note that version >= 1.1 is required.
 
 Then, just
 
