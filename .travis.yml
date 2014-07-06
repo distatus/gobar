@@ -8,3 +8,4 @@ go:
 
 install:
   - go get github.com/stretchr/testify
+  - go get -v ./...
