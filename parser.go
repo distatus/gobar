@@ -19,7 +19,6 @@
 // TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 // OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
 package main
 
 import (
@@ -185,7 +184,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			newCurrent.Background = NewBGRA(bg)
 		case !escaping && currentIndex > 0 && stext == "}":
 			if len(text) > 1 {
-				currentText = text[currentIndex - 1]
+				currentText = text[currentIndex-1]
 				moveCurrent(-1)
 			}
 			screening = false

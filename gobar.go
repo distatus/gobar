@@ -19,7 +19,6 @@
 // TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 // OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-
 package main
 
 import (
@@ -36,9 +35,9 @@ import (
 	"github.com/BurntSushi/xgbutil/ewmh"
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xgraphics"
-	"github.com/BurntSushi/xgbutil/xwindow"
 	"github.com/BurntSushi/xgbutil/xinerama"
 	"github.com/BurntSushi/xgbutil/xrect"
+	"github.com/BurntSushi/xgbutil/xwindow"
 
 	"github.com/docopt/docopt-go"
 )
@@ -87,9 +86,7 @@ type Geometry struct {
 // NewGeometry parses geometry from textual definition.
 // Input should be formatted as <width>x<height>+<x>+<y>.
 // A special "M" value is allowed as <width>, to represent 100%.
-func NewGeometry(
-	geostr string, head xrect.Rect, position Position,
-) *Geometry {
+func NewGeometry(geostr string, head xrect.Rect, position Position) *Geometry {
 	geometry := Geometry{}
 	var widthS string
 	_, err := fmt.Sscanf(
@@ -219,7 +216,7 @@ func (self *Bar) Draw(text []*TextPiece) {
 		for _, screen := range screens {
 			subimg := imgs[screen].SubImage(image.Rect(
 				xs[screen], 0,
-				xs[screen] + width, int(self.Geometries[screen].Height),
+				xs[screen]+width, int(self.Geometries[screen].Height),
 			))
 			subimg.For(func(x, y int) xgraphics.BGRA { return *piece.Background })
 
