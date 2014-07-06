@@ -110,7 +110,6 @@ func (self *TextParser) Tokenize(
 
 // Scan scans textual definition and returns array of TextPieces.
 // Possible empty pieces are omitted in the returned array.
-// TODO(Kenji): Escaping
 func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 	var text []*TextPiece
 
@@ -140,10 +139,14 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 	}
 
 	screening := false
+	escaping := false
 	for scanner.Scan() {
 		stext := scanner.Text()
-		switch stext {
-		case "{F":
+		switch {
+		case stext == "\\":
+			escaping = true
+			continue
+		case !escaping && stext == "{F":
 			scanner.Scan()
 			text := scanner.Text()
 			font, err := strconv.Atoi(text)
@@ -152,7 +155,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			}
 			newCurrent := moveCurrent(1)
 			newCurrent.Font = uint(font)
-		case "{S":
+		case !escaping && stext == "{S":
 			scanner.Scan()
 			text := scanner.Text()
 			screen, err := strconv.Atoi(text)
@@ -162,7 +165,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			newCurrent := moveCurrent(1)
 			newCurrent.Screens = append(newCurrent.Screens, uint(screen))
 			screening = true
-		case "{CF":
+		case !escaping && stext == "{CF":
 			scanner.Scan()
 			text := scanner.Text()
 			fg, err := strconv.ParseUint(text, 0, 32)
@@ -171,7 +174,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			}
 			newCurrent := moveCurrent(1)
 			newCurrent.Foreground = NewBGRA(fg)
-		case "{CB":
+		case !escaping && stext == "{CB":
 			scanner.Scan()
 			text := scanner.Text()
 			bg, err := strconv.ParseUint(text, 0, 32)
@@ -180,7 +183,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			}
 			newCurrent := moveCurrent(1)
 			newCurrent.Background = NewBGRA(bg)
-		case "}":
+		case !escaping && currentIndex > 0 && stext == "}":
 			if len(text) > 1 {
 				currentText = text[currentIndex - 1]
 				moveCurrent(-1)
@@ -198,6 +201,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			} else {
 				currentText.Text += stext
 			}
+			escaping = false
 		}
 	}
 
