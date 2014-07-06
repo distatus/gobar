@@ -55,7 +55,7 @@ type Position uint8
 
 const (
 	BOTTOM Position = iota
-	TOP    Position = iota
+	TOP
 )
 
 // Font stores font definition along with it's loaded truetype struct.
@@ -192,8 +192,11 @@ func (self *Bar) Draw(text []*TextPiece) {
 		imgs[i].For(func(x, y int) xgraphics.BGRA { return *self.Background })
 	}
 
-	var err error
-	xs := make([]int, len(self.Windows))
+	xsl := make([]int, len(self.Windows))
+	xsr := make([]int, len(self.Windows))
+	for i := range xsr {
+		xsr[i] = int(self.Geometries[i].Width)
+	}
 	for _, piece := range text {
 		if piece.Background == nil {
 			piece.Background = self.Background
@@ -214,18 +217,27 @@ func (self *Bar) Draw(text []*TextPiece) {
 		}
 
 		for _, screen := range screens {
+			xs := xsl[screen]
+			if piece.Align == RIGHT {
+				xs = xsr[screen] - width
+			}
+
 			subimg := imgs[screen].SubImage(image.Rect(
-				xs[screen], 0,
-				xs[screen]+width, int(self.Geometries[screen].Height),
+				xs, 0, xs+width, int(self.Geometries[screen].Height),
 			))
 			subimg.For(func(x, y int) xgraphics.BGRA { return *piece.Background })
 
-			xs[screen], _, err = subimg.Text(
-				xs[screen], 0,
-				piece.Foreground, font.Size, font.Font, piece.Text,
+			new_xs, _, err := subimg.Text(
+				xs, 0, piece.Foreground, font.Size, font.Font, piece.Text,
 			)
 			if err != nil {
 				log.Print(err) // TODO: Better logging
+			}
+
+			if piece.Align == LEFT {
+				xsl[screen] = new_xs
+			} else if piece.Align == RIGHT {
+				xsr[screen] -= width
 			}
 
 			subimg.XPaint(self.Windows[screen].Id)

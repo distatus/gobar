@@ -45,6 +45,7 @@ var TokenizeTests = []struct {
 	{"{Stest", 2, "{S"},
 	{"{CFtest", 3, "{CF"},
 	{"{CBtest", 3, "{CB"},
+	{"{ARtest", 3, "{AR"},
 	{"0xff1eF09atest", 10, "0xff1eF09a"},
 	{"0xff1eF0test", 1, "0"},
 	{"0312495test", 7, "0312495"},
@@ -100,6 +101,9 @@ var ScanTests = []struct {
 			Text:       "test",
 			Background: &xgraphics.BGRA{B: 0xFF, G: 0x00, R: 0xAA, A: 0x33},
 		},
+	}},
+	{"{ARtest}", []*TextPiece{
+		&TextPiece{Text: "test", Align: RIGHT},
 	}},
 	{"{S1test}", []*TextPiece{
 		&TextPiece{Text: "test", Screens: []uint{1}},

@@ -31,6 +31,14 @@ import (
 	"github.com/BurntSushi/xgbutil/xgraphics"
 )
 
+// Align defines text piece alignment on the screen.
+type Align uint8
+
+const (
+	LEFT Align = iota
+	RIGHT
+)
+
 // Type EndScan is an artifical Error.
 // Raised when parser should stop scanning.
 type EndScan struct{}
@@ -52,6 +60,7 @@ func NewBGRA(color uint64) *xgraphics.BGRA {
 type TextPiece struct {
 	Text       string
 	Font       uint
+	Align      Align
 	Foreground *xgraphics.BGRA
 	Background *xgraphics.BGRA
 	Screens    []uint
@@ -87,6 +96,8 @@ func (self *TextParser) Tokenize(
 	case string(data[:3]) == "{CF":
 		advance, token, err = 3, data[:3], nil
 	case string(data[:3]) == "{CB":
+		advance, token, err = 3, data[:3], nil
+	case string(data[:3]) == "{AR":
 		advance, token, err = 3, data[:3], nil
 	case len(data) >= 10 && self.rgbPattern.Match(data[:10]):
 		advance, token, err = 10, data[:10], nil
@@ -182,6 +193,9 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			}
 			newCurrent := moveCurrent(1)
 			newCurrent.Background = NewBGRA(bg)
+		case !escaping && stext == "{AR":
+			newCurrent := moveCurrent(1)
+			newCurrent.Align = RIGHT
 		case !escaping && currentIndex > 0 && stext == "}":
 			if len(text) > 1 {
 				currentText = text[currentIndex-1]
