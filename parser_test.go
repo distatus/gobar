@@ -149,6 +149,11 @@ var ScanTests = []struct {
 		&TextPiece{Text: "test2", Font: 2},
 		&TextPiece{Text: "test3", Font: 1},
 	}},
+	{"{S1test1}{F1{S1test2}test3}", []*TextPiece{
+		&TextPiece{Text: "test1", Screens: []uint{1}},
+		&TextPiece{Text: "test2", Font: 1, Screens: []uint{1}},
+		&TextPiece{Text: "test3", Font: 1},
+	}},
 	{"}", []*TextPiece{
 		&TextPiece{Text: "}"},
 	}},
