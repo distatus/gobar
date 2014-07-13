@@ -105,6 +105,14 @@ var ScanTests = []struct {
 	{"{ARtest}", []*TextPiece{
 		&TextPiece{Text: "test", Align: RIGHT},
 	}},
+	{"{ARtest1{F1test2}}", []*TextPiece{
+		&TextPiece{Text: "test2", Font: 1, Align: RIGHT},
+		&TextPiece{Text: "test1", Align: RIGHT},
+	}},
+	{"{AR{F1test1}test2}", []*TextPiece{
+		&TextPiece{Text: "test2", Align: RIGHT},
+		&TextPiece{Text: "test1", Font: 1, Align: RIGHT},
+	}},
 	{"{S1test}", []*TextPiece{
 		&TextPiece{Text: "test", Screens: []uint{1}},
 	}},

@@ -130,22 +130,35 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 	currentText := &TextPiece{}
 	text = append(text, currentText)
 
-	moveCurrent := func() *TextPiece {
+	currentIndex := func() int {
+		for i, t := range text {
+			if t == currentText {
+				return i
+			}
+		}
+		return 0
+	}
+
+	moveCurrent := func(i int) *TextPiece {
 		newCurrent := &TextPiece{}
 		*newCurrent = *currentText
 		newCurrent.Text = ""
-		text = append(text, newCurrent)
+		if currentText.Align == RIGHT {
+			text = append(text, &TextPiece{})
+			copy(text[i+1:], text[i:])
+			text[i] = newCurrent
+		} else {
+			text = append(text, newCurrent)
+		}
 		currentText = newCurrent
 		return newCurrent
 	}
 
 	previousText := func() bool {
-		gi := 0
-		for i, t := range text {
-			if t == currentText {
-				gi = i
-				break
-			}
+		gi := currentIndex()
+		if currentText.Align == RIGHT && gi < len(text)-1 {
+			currentText = text[gi+1]
+			return true
 		}
 		if gi > 0 {
 			currentText = text[gi-1]
@@ -176,7 +189,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			if err != nil {
 				logPieceError(err, stext, text)
 			}
-			newCurrent := moveCurrent()
+			newCurrent := moveCurrent(currentIndex())
 			newCurrent.Font = uint(font)
 		case !escaping && stext == "{S":
 			scanner.Scan()
@@ -185,7 +198,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			if err != nil {
 				logPieceError(err, stext, text)
 			}
-			newCurrent := moveCurrent()
+			newCurrent := moveCurrent(currentIndex())
 			newCurrent.Screens = append(newCurrent.Screens, uint(screen))
 			screening = true
 		case !escaping && stext == "{CF":
@@ -195,7 +208,7 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			if err != nil {
 				logPieceError(err, stext, text)
 			}
-			newCurrent := moveCurrent()
+			newCurrent := moveCurrent(currentIndex())
 			newCurrent.Foreground = NewBGRA(fg)
 		case !escaping && stext == "{CB":
 			scanner.Scan()
@@ -204,14 +217,15 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 			if err != nil {
 				logPieceError(err, stext, text)
 			}
-			newCurrent := moveCurrent()
+			newCurrent := moveCurrent(currentIndex())
 			newCurrent.Background = NewBGRA(bg)
 		case !escaping && stext == "{AR":
-			newCurrent := moveCurrent()
+			newCurrent := moveCurrent(currentIndex())
 			newCurrent.Align = RIGHT
 		case !escaping && stext == "}":
+			i := currentIndex()
 			if previousText() {
-				moveCurrent()
+				moveCurrent(i)
 				continue
 			}
 			screening = false
