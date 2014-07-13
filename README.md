@@ -4,6 +4,15 @@
 
 Supports xinerama, EWMH, font antialiasing and possibly some other fancy looking names and shortcuts.
 
+## screenshot
+
+Two **gobar** instances.
+
+Top with some conky metrics.
+Bottom with wingo workspaces (bash + wingo-cmd for now) and date.
+
+![screenshot](https://copy.com/eIedmSWFgREV)
+
 ## installation
 
 First, you have to [get Go](http://golang.org/doc/install). Note that version >= 1.1 is required.
@@ -44,7 +53,7 @@ Other than that, an input string should be piped into the **gobar** executable.
 
 A really simple example could be displaying current date and time.
 ```bash
-$ while; do date; sleep 1; done | gobar
+$ while :; do date; sleep 1; done | gobar
 ```
 
 Special tokens can also be used in the input string to allow nice formatting.
