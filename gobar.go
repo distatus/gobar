@@ -312,6 +312,17 @@ func (self *Bar) Draw(text []*TextPiece) {
 	}
 }
 
+// ParseColor parses color string to integer value.
+// If parsing fails, returns fallback instead.
+func ParseColor(color string, fallback uint64) uint64 {
+	result, err := strconv.ParseUint(color, 0, 32)
+	if err != nil {
+		log.Printf("Incorrect color `%s`, using default. Got `%s`", color, err)
+		return fallback
+	}
+	return result
+}
+
 // main gets command line arguments, creates X connection and initializes Bar.
 // This is also where X event loop and Stdin reading lies.
 func main() {
@@ -336,10 +347,8 @@ Options:
 
 	arguments, err := docopt.Parse(cli, nil, true, "", false)
 	fatal(err)
-	fgColor, err := strconv.ParseUint(arguments["--fg"].(string), 0, 32)
-	fatal(err)
-	bgColor, err := strconv.ParseUint(arguments["--bg"].(string), 0, 32)
-	fatal(err)
+	fgColor := ParseColor(arguments["--fg"].(string), 0xFFFFFFFF)
+	bgColor := ParseColor(arguments["--bg"].(string), 0xFF000000)
 	bottom := arguments["--bottom"].(bool)
 	position := TOP
 	if bottom {
