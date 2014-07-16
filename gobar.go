@@ -263,6 +263,10 @@ func (self *Bar) Draw(text []*TextPiece) {
 			piece.Foreground = self.Foreground
 		}
 
+		if piece.Font > uint(len(self.Fonts))-1 {
+			log.Printf("Invalid font index `%d`, using 0", piece.Font)
+			piece.Font = 0
+		}
 		font := self.Fonts[piece.Font]
 		width, _ := xgraphics.Extents(font.Font, font.Size, piece.Text)
 
