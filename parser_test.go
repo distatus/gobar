@@ -36,7 +36,6 @@ var TokenizeTests = []struct {
 	expected_advance int
 	expected_token   string
 }{
-	//FIXME: Create []byte using make, with cap 1 hard
 	{"t", 1, "t"},
 	{"te", 1, "t"},
 	{"tes", 1, "t"},

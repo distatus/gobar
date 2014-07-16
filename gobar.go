@@ -22,10 +22,13 @@
 package main
 
 import (
+	"encoding/xml"
+	"errors"
 	"fmt"
 	"image"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -43,10 +46,10 @@ import (
 )
 
 // fatal is a helper function to call when something terribly wrong
-// might happen. Logs given error and terminates application.
+// had happened. Logs given error and terminates application.
 func fatal(err error) {
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 }
 
@@ -65,14 +68,69 @@ type Font struct {
 	Font *truetype.Font
 }
 
+// FindFontError is returned when FindFontPath fails to fint any usable fonts.
+type FindFontError struct {
+	Action string
+	Orig   error
+}
+
+func (f FindFontError) Error() string {
+	return fmt.Sprintf("[fontconfig] Could not %s. Got `%s`", f.Action, f.Orig)
+}
+
+// FindFontPath tries hard to find any usable font(s) in the system.
+// It does so by parsing fontconfig configuration and looking through
+// the specified directories for anything that could possibly by used
+// by freetype font parser.
+func FindFontPath() (string, error) {
+	log.Print("Trying to find usable font")
+
+	fontsConf, err := os.Open("/etc/fonts/fonts.conf")
+	if err != nil {
+		return "", FindFontError{"open file", err}
+	}
+	defer fontsConf.Close()
+
+	result := struct {
+		Dirs []string `xml:"dir"`
+	}{}
+	decoder := xml.NewDecoder(fontsConf)
+	if err := decoder.Decode(&result); err != nil {
+		return "", FindFontError{"decode file", err}
+	}
+
+	for _, dir := range result.Dirs {
+		files, err := filepath.Glob(fmt.Sprintf("%s/TTF/*.ttf", dir))
+		if err == nil && files != nil {
+			return files[0], nil
+		}
+	}
+	return "", FindFontError{"find font files", err}
+}
+
+// FontError is returned when NewFont fails to create a font.
+type FontError struct {
+	Path string
+	Orig error
+}
+
+func (f FontError) Error() string {
+	return fmt.Sprintf("Could not open font `%s`. Got `%s`", f.Path, f.Orig)
+}
+
 // NewFont opens a font file and parses it with truetype engine.
-// TODO(Kenji): Fallback when path doesn't exist.
-func NewFont(path string, size float64) *Font {
+func NewFont(path string, size float64) (*Font, error) {
 	fontReader, err := os.Open(path)
-	fatal(err)
+	if err != nil {
+		return nil, FontError{path, err}
+	}
+	defer fontReader.Close()
+
 	font, err := xgraphics.ParseFont(fontReader)
-	fatal(err)
-	return &Font{path, size, font}
+	if err != nil {
+		return nil, FontError{path, err}
+	}
+	return &Font{path, size, font}, nil
 }
 
 // Geometry stores bars geometry on the screen (or actually monitor).
@@ -271,7 +329,7 @@ Options:
                          <w>x<h>+<x>+<y>. If not specified, uses Mx16+0+0 for each screen.
                          M is a special case for <w> only, taking all available space.
   --fonts=<FONTS>        Comma seperated list of fonts in form of path:size.
-                         [default: /usr/share/fonts/TTF/LiberationMono-Regular.ttf:12].
+                         Defaults to whatever it can find in fontconfig configuration.
   --fg=<COLOR>           Foreground color (0xAARRGGBB) [default: 0xFFFFFFFF].
   --bg=<COLOR>           Background color (0xAARRGGBB) [default: 0xFF000000].
 	`
@@ -287,13 +345,48 @@ Options:
 	if bottom {
 		position = BOTTOM
 	}
-	fontSpecs := strings.Split(arguments["--fonts"].(string), ",")
-	fonts := make([]*Font, len(fontSpecs))
-	for i, fontSpec := range fontSpecs {
+
+	fontSpecs := []string{}
+	if arguments["--fonts"] != nil {
+		fontSpecs = strings.Split(arguments["--fonts"].(string), ",")
+	}
+	fonts := make([]*Font, 0, len(fontSpecs))
+	for _, fontSpec := range fontSpecs {
 		fontSpecSplit := strings.Split(fontSpec, ":")
 		fontPath := fontSpecSplit[0]
 		fontSize, _ := strconv.ParseFloat(fontSpecSplit[1], 32)
-		fonts[i] = NewFont(fontPath, fontSize)
+		font, err := NewFont(fontPath, fontSize)
+		if err != nil {
+			log.Print(err)
+			if len(fonts) > 0 {
+				log.Print("Using font at index 0")
+				font, err = fonts[0], nil
+			} else {
+				fontPath, err := FindFontPath()
+				if err != nil {
+					log.Print(err)
+				} else {
+					font, err = NewFont(fontPath, fontSize)
+				}
+			}
+		}
+		if err != nil {
+			log.Print(err)
+		} else {
+			fonts = append(fonts, font)
+		}
+	}
+	if len(fonts) == 0 {
+		fontPath, err := FindFontPath()
+		if err != nil {
+			fatal(errors.New("No usable fonts found, bailing out"))
+		}
+
+		font, err := NewFont(fontPath, 12)
+		if err != nil {
+			fatal(errors.New("No usable fonts found, bailing out"))
+		}
+		fonts = append(fonts, font)
 	}
 
 	X, err := xgbutil.NewConn()
