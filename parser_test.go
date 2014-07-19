@@ -185,9 +185,8 @@ func TestScan(t *testing.T) {
 	parser := NewTextParser()
 
 	for i, tt := range ScanTests {
-		actual, err := parser.Scan(strings.NewReader(tt.input))
+		actual := parser.Scan(strings.NewReader(tt.input))
 
-		assert.NoError(t, err)
 		assert.Equal(
 			t, tt.expected, actual,
 			fmt.Sprintf("%d: Scan(%q) => %q != %q", i, tt.input, actual, tt.expected),

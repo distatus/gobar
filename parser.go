@@ -120,7 +120,7 @@ func (self *TextParser) Tokenize(
 
 // Scan scans textual definition and returns array of TextPieces.
 // Possible empty pieces are omitted in the returned array.
-func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
+func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 	var text []*TextPiece
 
 	scanner := bufio.NewScanner(r)
@@ -254,5 +254,5 @@ func (self *TextParser) Scan(r io.Reader) ([]*TextPiece, error) {
 		}
 	}
 
-	return text2, nil
+	return text2
 }
