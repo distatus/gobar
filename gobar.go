@@ -325,7 +325,7 @@ func (self *Bar) Draw(text []*TextPiece) {
 func ParseColor(color string, fallback uint64) uint64 {
 	result, err := strconv.ParseUint(color, 0, 32)
 	if err != nil {
-		log.Printf("Incorrect color `%s`, using default. Got `%s`", color, err)
+		log.Printf("Invalid color `%s`, using default. Got `%s`", color, err)
 		return fallback
 	}
 	return result
@@ -396,7 +396,7 @@ Options:
   --geometry=<GEOMETRY>  Comma separated list of monitor geometries in form of
                          <w>x<h>+<x>+<y>. If not specified, uses Mx16+0+0 for each screen.
                          M is a special case for <w> only, taking all available space.
-  --fonts=<FONTS>        Comma separated list of fonts in form of path:size.
+  --fonts=<FONTS>        Comma separated list of fonts in form of path[:size].
                          Defaults to whatever it can find in fontconfig configuration.
   --fg=<COLOR>           Foreground color (0xAARRGGBB) [default: 0xFFFFFFFF].
   --bg=<COLOR>           Background color (0xAARRGGBB) [default: 0xFF000000].

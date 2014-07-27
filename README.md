@@ -41,9 +41,11 @@ If omitted, or if number of specified geometries is lower than number of monitor
 
 **--fonts=** takes comma separated list of fonts.
 
-Each font element is in form of `<ttf file path>:<font size>`.
+Each font element is in form of `<ttf file path>[:<font size>]`.
 
 If omitted, or if incorrect path is specified, defaults to whatever it can find in fontconfig configuration.
+
+If `<font size>` part is omitted or incorrect, defaults to `12`.
 
 **--fg=** takes main foreground color. Should be in form `0xAARRGGBB`.
 
