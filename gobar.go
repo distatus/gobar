@@ -78,6 +78,8 @@ func (f FindFontError) Error() string {
 	return fmt.Sprintf("[fontconfig] Could not %s. Got `%s`", f.Action, f.Orig)
 }
 
+type FontFinder func() (string, error)
+
 // FindFontPath tries hard to find any usable font(s) in the system.
 // It does so by parsing fontconfig configuration and looking through
 // the specified directories for anything that could possibly by used
@@ -117,6 +119,8 @@ type FontError struct {
 func (f FontError) Error() string {
 	return fmt.Sprintf("Could not open font `%s`. Got `%s`", f.Path, f.Orig)
 }
+
+type FontCreator func(path string, size float64) (*Font, error)
 
 // NewFont opens a font file and parses it with truetype engine.
 func NewFont(path string, size float64) (*Font, error) {
@@ -327,6 +331,55 @@ func ParseColor(color string, fallback uint64) uint64 {
 	return result
 }
 
+// ParseFonts parses a list of stringified font definitions
+// into a list of Font structures.
+// Also handles all kinds of bad input and tries hard to recover from it.
+// Returns error only if not a single usable font is found in the end.
+func ParseFonts(
+	fontSpecs []string, createFont FontCreator, findFont FontFinder,
+) (fonts []*Font, err error) {
+	fonts = make([]*Font, 0, len(fontSpecs))
+	fontSize := 12.0
+	for _, fontSpec := range fontSpecs {
+		fontSpecSplit := strings.Split(fontSpec, ":")
+		fontPath := fontSpecSplit[0]
+		fontSize = 12.0
+		if len(fontSpecSplit) < 2 {
+			log.Printf("No font size for `%s`, using `12`", fontPath)
+		} else {
+			fontSizeStr := fontSpecSplit[1]
+			possibleFontSize, err := strconv.ParseFloat(fontSizeStr, 32)
+			if err == nil {
+				fontSize = possibleFontSize
+			} else {
+				log.Printf(
+					"Invalid font size `%s` for `%s`, using `12`. Got `%s`",
+					fontSizeStr, fontPath, err,
+				)
+			}
+		}
+		font, err := createFont(fontPath, fontSize)
+		if err != nil {
+			log.Print(err)
+		} else {
+			fonts = append(fonts, font)
+		}
+	}
+	if len(fonts) == 0 {
+		fontPath, err := findFont()
+		if err != nil {
+			return fonts, err
+		}
+
+		font, err := createFont(fontPath, fontSize)
+		if err != nil {
+			return fonts, err
+		}
+		fonts = append(fonts, font)
+	}
+	return
+}
+
 // main gets command line arguments, creates X connection and initializes Bar.
 // This is also where X event loop and Stdin reading lies.
 func main() {
@@ -363,43 +416,9 @@ Options:
 	if arguments["--fonts"] != nil {
 		fontSpecs = strings.Split(arguments["--fonts"].(string), ",")
 	}
-	fonts := make([]*Font, 0, len(fontSpecs))
-	for _, fontSpec := range fontSpecs {
-		fontSpecSplit := strings.Split(fontSpec, ":")
-		fontPath := fontSpecSplit[0]
-		fontSize, _ := strconv.ParseFloat(fontSpecSplit[1], 32)
-		font, err := NewFont(fontPath, fontSize)
-		if err != nil {
-			log.Print(err)
-			if len(fonts) > 0 {
-				log.Print("Using font at index 0")
-				font, err = fonts[0], nil
-			} else {
-				fontPath, err := FindFontPath()
-				if err != nil {
-					log.Print(err)
-				} else {
-					font, err = NewFont(fontPath, fontSize)
-				}
-			}
-		}
-		if err != nil {
-			log.Print(err)
-		} else {
-			fonts = append(fonts, font)
-		}
-	}
-	if len(fonts) == 0 {
-		fontPath, err := FindFontPath()
-		if err != nil {
-			fatal(errors.New("No usable fonts found, bailing out"))
-		}
-
-		font, err := NewFont(fontPath, 12)
-		if err != nil {
-			fatal(errors.New("No usable fonts found, bailing out"))
-		}
-		fonts = append(fonts, font)
+	fonts, err := ParseFonts(fontSpecs, NewFont, FindFontPath)
+	if err != nil {
+		fatal(errors.New("No usable fonts found, bailing out"))
 	}
 
 	X, err := xgbutil.NewConn()
