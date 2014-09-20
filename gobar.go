@@ -314,6 +314,7 @@ func (self *Bar) Draw(text []*TextPiece) {
 	for i, img := range imgs {
 		img.XSurfaceSet(self.Windows[i].Id)
 		img.XDraw()
+		img.XPaint(self.Windows[i].Id)
 		img.Destroy()
 
 		self.Windows[i].Map()
