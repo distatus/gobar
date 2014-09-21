@@ -179,6 +179,18 @@ var ScanTests = []struct {
 	{"\\}", []*TextPiece{
 		&TextPiece{Text: "}"},
 	}},
+	{"{test1}", []*TextPiece{
+		{Text: "test1"},
+	}},
+	{"\\{test1}", []*TextPiece{
+		{Text: "{test1}"},
+	}},
+	{"\\{test1}{test2}", []*TextPiece{
+		{Text: "{test1}"}, {Text: "test2"},
+	}},
+	{"{F1test1}{test2}{ARtest3}", []*TextPiece{
+		{Text: "test1", Font: 1}, {Text: "test2"}, {Text: "test3", Align: RIGHT},
+	}},
 }
 
 func TestScan(t *testing.T) {

@@ -62,7 +62,7 @@ Special tokens can also be used in the input string to allow nice formatting.
 
 #### Input string formatting syntax
 
-Each token should be preceded with `{` and will be active until `}`.
+Each token should be preceded with `{` and will be active until `}`. Note that `{text}` is also treated as valid token and will output `text`. Escaping with `\` will print bracket(s) literally.
 
 **F&lt;num&gt;** sets active font, **&lt;num&gt;** should be index of one of the elements from fonts list specified in **--fonts=**.
 

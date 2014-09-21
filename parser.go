@@ -78,7 +78,7 @@ func NewTextParser() *TextParser {
 }
 
 // Tokenize turns textual definition into a series of valid tokens.
-// If no valid token is found at given place, char a 0 position if returned.
+// If no valid token is found at given place, char at 0 position is returned.
 func (self *TextParser) Tokenize(
 	data []byte, EOF bool,
 ) (advance int, token []byte, err error) {
@@ -222,6 +222,8 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 		case !escaping && stext == "{AR":
 			newCurrent := moveCurrent(currentIndex())
 			newCurrent.Align = RIGHT
+		case !escaping && stext == "{":
+			moveCurrent(currentIndex())
 		case !escaping && stext == "}":
 			i := currentIndex()
 			if previousText() {
