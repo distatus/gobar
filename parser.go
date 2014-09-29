@@ -64,6 +64,8 @@ type TextPiece struct {
 	Foreground *xgraphics.BGRA
 	Background *xgraphics.BGRA
 	Screens    []uint
+
+	Origin *TextPiece
 }
 
 // TextParser is used to create a set of TextPieces from a textual definition.
@@ -139,11 +141,17 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 		return 0
 	}
 
-	moveCurrent := func(i int) *TextPiece {
+	moveCurrent := func(end bool) *TextPiece {
 		newCurrent := &TextPiece{}
-		*newCurrent = *currentText
+		if end {
+			*newCurrent = *currentText.Origin
+		} else {
+			*newCurrent = *currentText
+			newCurrent.Origin = currentText
+		}
 		newCurrent.Text = ""
 		if currentText.Align == RIGHT {
+			i := currentIndex()
 			text = append(text, &TextPiece{})
 			copy(text[i+1:], text[i:])
 			text[i] = newCurrent
@@ -152,19 +160,6 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 		}
 		currentText = newCurrent
 		return newCurrent
-	}
-
-	previousText := func() bool {
-		gi := currentIndex()
-		if currentText.Align == RIGHT && gi < len(text)-1 {
-			currentText = text[gi+1]
-			return true
-		}
-		if gi > 0 {
-			currentText = text[gi-1]
-			return true
-		}
-		return false
 	}
 
 	logPieceError := func(err error, pieces ...string) {
@@ -176,6 +171,7 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 
 	screening := false
 	escaping := false
+	bracketing := 0
 	for scanner.Scan() {
 		stext := scanner.Text()
 		switch {
@@ -189,7 +185,7 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 			if err != nil {
 				logPieceError(err, stext, text)
 			}
-			newCurrent := moveCurrent(currentIndex())
+			newCurrent := moveCurrent(false)
 			newCurrent.Font = uint(font)
 		case !escaping && stext == "{S":
 			scanner.Scan()
@@ -198,7 +194,7 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 			if err != nil {
 				logPieceError(err, stext, text)
 			}
-			newCurrent := moveCurrent(currentIndex())
+			newCurrent := moveCurrent(false)
 			newCurrent.Screens = append(newCurrent.Screens, uint(screen))
 			screening = true
 		case !escaping && stext == "{CF":
@@ -208,7 +204,7 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 			if err != nil {
 				logPieceError(err, stext, text)
 			}
-			newCurrent := moveCurrent(currentIndex())
+			newCurrent := moveCurrent(false)
 			newCurrent.Foreground = NewBGRA(fg)
 		case !escaping && stext == "{CB":
 			scanner.Scan()
@@ -217,17 +213,20 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 			if err != nil {
 				logPieceError(err, stext, text)
 			}
-			newCurrent := moveCurrent(currentIndex())
+			newCurrent := moveCurrent(false)
 			newCurrent.Background = NewBGRA(bg)
 		case !escaping && stext == "{AR":
-			newCurrent := moveCurrent(currentIndex())
+			newCurrent := moveCurrent(false)
 			newCurrent.Align = RIGHT
 		case !escaping && stext == "{":
-			moveCurrent(currentIndex())
+			bracketing += 1
 		case !escaping && stext == "}":
-			i := currentIndex()
-			if previousText() {
-				moveCurrent(i)
+			if bracketing > 0 {
+				bracketing -= 1
+				continue
+			}
+			if currentText.Origin != nil {
+				moveCurrent(true)
 				continue
 			}
 			screening = false

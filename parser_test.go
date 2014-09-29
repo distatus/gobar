@@ -186,10 +186,19 @@ var ScanTests = []struct {
 		{Text: "{test1}"},
 	}},
 	{"\\{test1}{test2}", []*TextPiece{
-		{Text: "{test1}"}, {Text: "test2"},
+		{Text: "{test1}test2"},
 	}},
 	{"{F1test1}{test2}{ARtest3}", []*TextPiece{
 		{Text: "test1", Font: 1}, {Text: "test2"}, {Text: "test3", Align: RIGHT},
+	}},
+	{"{F1test1}test2", []*TextPiece{
+		{Text: "test1", Font: 1}, {Text: "test2"},
+	}},
+	{"{F1{S2test1}}test2", []*TextPiece{
+		{Text: "test1", Font: 1, Screens: []uint{2}}, {Text: "test2"},
+	}},
+	{"{F1{S2test1}test2}test3", []*TextPiece{
+		{Text: "test1", Font: 1, Screens: []uint{2}}, {Text: "test2", Font: 1}, {Text: "test3"},
 	}},
 }
 
@@ -198,6 +207,10 @@ func TestScan(t *testing.T) {
 
 	for i, tt := range ScanTests {
 		actual := parser.Scan(strings.NewReader(tt.input))
+		// We don't care about Origin
+		for _, t := range actual {
+			t.Origin = nil
+		}
 
 		assert.Equal(
 			t, tt.expected, actual,
