@@ -90,94 +90,75 @@ var ScanTests = []struct {
 		&TextPiece{Text: "test", Font: 1},
 	}},
 	{"{CF0xFF00AA33test}", []*TextPiece{
-		&TextPiece{
-			Text:       "test",
-			Foreground: &xgraphics.BGRA{B: 0x33, G: 0xAA, R: 0x00, A: 0xFF},
-		},
+		{Text: "test", Foreground: &xgraphics.BGRA{B: 0x33, G: 0xAA, R: 0x00, A: 0xFF}},
 	}},
 	{"{CB0x33AA00FFtest}", []*TextPiece{
-		&TextPiece{
-			Text:       "test",
-			Background: &xgraphics.BGRA{B: 0xFF, G: 0x00, R: 0xAA, A: 0x33},
-		},
+		{Text: "test", Background: &xgraphics.BGRA{B: 0xFF, G: 0x00, R: 0xAA, A: 0x33}},
 	}},
 	{"{ARtest}", []*TextPiece{
-		&TextPiece{Text: "test", Align: RIGHT},
+		{Text: "test", Align: RIGHT},
 	}},
 	{"{ARtest1{F1test2}}", []*TextPiece{
-		&TextPiece{Text: "test2", Font: 1, Align: RIGHT},
-		&TextPiece{Text: "test1", Align: RIGHT},
+		{Text: "test2", Font: 1, Align: RIGHT}, {Text: "test1", Align: RIGHT},
 	}},
 	{"{AR{F1test1}test2}", []*TextPiece{
-		&TextPiece{Text: "test2", Align: RIGHT},
-		&TextPiece{Text: "test1", Font: 1, Align: RIGHT},
+		{Text: "test2", Align: RIGHT}, {Text: "test1", Font: 1, Align: RIGHT},
 	}},
 	{"{S1test}", []*TextPiece{
-		&TextPiece{Text: "test", Screens: []uint{1}},
+		{Text: "test", Screens: []uint{1}},
 	}},
 	{"{S1,2test}", []*TextPiece{
-		&TextPiece{Text: "test", Screens: []uint{1, 2}},
+		{Text: "test", Screens: []uint{1, 2}},
 	}},
 	{"{F1test1}test2", []*TextPiece{
-		&TextPiece{Text: "test1", Font: 1},
-		&TextPiece{Text: "test2"},
+		{Text: "test1", Font: 1}, {Text: "test2"},
 	}},
 	{"test1{F1test2}", []*TextPiece{
-		&TextPiece{Text: "test1"},
-		&TextPiece{Text: "test2", Font: 1},
+		{Text: "test1"}, {Text: "test2", Font: 1},
 	}},
 	{"test1{F1test2}test3", []*TextPiece{
-		&TextPiece{Text: "test1"},
-		&TextPiece{Text: "test2", Font: 1},
-		&TextPiece{Text: "test3"},
+		{Text: "test1"}, {Text: "test2", Font: 1}, {Text: "test3"},
 	}},
 	{"{F1test1}{F2test2}", []*TextPiece{
-		&TextPiece{Text: "test1", Font: 1},
-		&TextPiece{Text: "test2", Font: 2},
+		{Text: "test1", Font: 1}, {Text: "test2", Font: 2},
 	}},
 	{"{F1test1}test2{F2test3}", []*TextPiece{
-		&TextPiece{Text: "test1", Font: 1},
-		&TextPiece{Text: "test2"},
-		&TextPiece{Text: "test3", Font: 2},
+		{Text: "test1", Font: 1}, {Text: "test2"}, {Text: "test3", Font: 2},
 	}},
 	{"{F1{F2test1}}", []*TextPiece{
-		&TextPiece{Text: "test1", Font: 2},
+		{Text: "test1", Font: 2},
 	}},
 	{"{F1test1{F2test2}}", []*TextPiece{
-		&TextPiece{Text: "test1", Font: 1},
-		&TextPiece{Text: "test2", Font: 2},
+		{Text: "test1", Font: 1}, {Text: "test2", Font: 2},
 	}},
 	{"{F1{F2test1}test2}", []*TextPiece{
-		&TextPiece{Text: "test1", Font: 2},
-		&TextPiece{Text: "test2", Font: 1},
+		{Text: "test1", Font: 2}, {Text: "test2", Font: 1},
 	}},
 	{"{F1test1{F2test2}test3}", []*TextPiece{
-		&TextPiece{Text: "test1", Font: 1},
-		&TextPiece{Text: "test2", Font: 2},
-		&TextPiece{Text: "test3", Font: 1},
+		{Text: "test1", Font: 1}, {Text: "test2", Font: 2}, {Text: "test3", Font: 1},
 	}},
 	{"{S1test1}{F1{S1test2}test3}", []*TextPiece{
-		&TextPiece{Text: "test1", Screens: []uint{1}},
-		&TextPiece{Text: "test2", Font: 1, Screens: []uint{1}},
-		&TextPiece{Text: "test3", Font: 1},
+		{Text: "test1", Screens: []uint{1}},
+		{Text: "test2", Font: 1, Screens: []uint{1}},
+		{Text: "test3", Font: 1},
 	}},
 	{"}", []*TextPiece{
-		&TextPiece{Text: "}"},
+		{Text: "}"},
 	}},
 	{"\\{F", []*TextPiece{
-		&TextPiece{Text: "{F"},
+		{Text: "{F"},
 	}},
 	{"\\{S", []*TextPiece{
-		&TextPiece{Text: "{S"},
+		{Text: "{S"},
 	}},
 	{"\\{CF", []*TextPiece{
-		&TextPiece{Text: "{CF"},
+		{Text: "{CF"},
 	}},
 	{"\\{CB", []*TextPiece{
-		&TextPiece{Text: "{CB"},
+		{Text: "{CB"},
 	}},
 	{"\\}", []*TextPiece{
-		&TextPiece{Text: "}"},
+		{Text: "}"},
 	}},
 	{"{test1}", []*TextPiece{
 		{Text: "test1"},
