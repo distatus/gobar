@@ -22,6 +22,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -448,12 +449,18 @@ Options:
 	bar := NewBar(X, geometries, position, fgColor, bgColor, fonts)
 	parser := NewTextParser()
 
-	stdin := make(chan []*TextPiece, 0)
+	stdin := make(chan []*TextPiece)
 	go func() {
 		defer close(stdin)
+		reader := bufio.NewReader(os.Stdin)
 
 		for {
-			stdin <- parser.Scan(os.Stdin)
+			str, err := reader.ReadString('\n')
+			if err != nil {
+				log.Printf("Error reading stdin. Got `%s`", err)
+			} else {
+				stdin <- parser.Scan(strings.NewReader(str))
+			}
 		}
 	}()
 
