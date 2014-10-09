@@ -54,6 +54,15 @@ func fatal(err error) {
 	}
 }
 
+func contains(slice []uint, item uint) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
 // Position defines bar placement on the screen.
 type Position uint8
 
@@ -275,11 +284,18 @@ func (self *Bar) Draw(text []*TextPiece) {
 		font := self.Fonts[piece.Font]
 		width, _ := xgraphics.Extents(font.Font, font.Size, piece.Text)
 
-		screens := piece.Screens
-		if screens == nil {
-			screens = make([]uint, len(imgs))
+		screens := []uint{}
+		if piece.Screens == nil {
 			for i := range imgs {
-				screens[i] = uint(i)
+				if !contains(piece.NotScreens, uint(i)) {
+					screens = append(screens, uint(i))
+				}
+			}
+		} else {
+			for _, screen := range piece.Screens {
+				if !contains(piece.NotScreens, screen) {
+					screens = append(screens, screen)
+				}
 			}
 		}
 

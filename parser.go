@@ -64,6 +64,7 @@ type TextPiece struct {
 	Foreground *xgraphics.BGRA
 	Background *xgraphics.BGRA
 	Screens    []uint
+	NotScreens []uint
 
 	Origin *TextPiece
 }
@@ -103,9 +104,12 @@ func (self *TextParser) Tokenize(
 		advance, token, err = 3, data[:3], nil
 	case len(data) >= 10 && self.rgbPattern.Match(data[:10]):
 		advance, token, err = 10, data[:10], nil
-	case '0' <= data[0] && data[0] <= '9':
+	case ('0' <= data[0] && data[0] <= '9') || data[0] == '-':
 		i := 0
-		for _, n := range data {
+		if data[0] == '-' {
+			i = 1
+		}
+		for _, n := range data[i:] {
 			if !('0' <= n && n <= '9') {
 				break
 			}
@@ -163,6 +167,7 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 	}
 
 	logPieceError := func(err error, pieces ...string) {
+		log.Printf("Parsing `%q`: %s", pieces, err)
 		log.Print(err)
 		for _, piece := range pieces {
 			currentText.Text += piece
@@ -195,7 +200,11 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 				logPieceError(err, stext, text)
 			}
 			newCurrent := moveCurrent(false)
-			newCurrent.Screens = append(newCurrent.Screens, uint(screen))
+			if text[0] == '-' {
+				newCurrent.NotScreens = append(newCurrent.NotScreens, uint(-screen))
+			} else {
+				newCurrent.Screens = append(newCurrent.Screens, uint(screen))
+			}
 			screening = true
 		case !escaping && stext == "{CF":
 			scanner.Scan()
@@ -225,11 +234,11 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 				bracketing -= 1
 				continue
 			}
+			screening = false
 			if currentText.Origin != nil {
 				moveCurrent(true)
 				continue
 			}
-			screening = false
 			fallthrough
 		default:
 			if screening && stext == "," {

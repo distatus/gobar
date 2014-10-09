@@ -181,6 +181,12 @@ var ScanTests = []struct {
 	{"{F1{S2test1}test2}test3", []*TextPiece{
 		{Text: "test1", Font: 1, Screens: []uint{2}}, {Text: "test2", Font: 1}, {Text: "test3"},
 	}},
+	{"{S-0test1}", []*TextPiece{
+		{Text: "test1", NotScreens: []uint{0}},
+	}},
+	{"{S-1test1}", []*TextPiece{
+		{Text: "test1", NotScreens: []uint{1}},
+	}},
 }
 
 func TestScan(t *testing.T) {

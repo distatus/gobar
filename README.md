@@ -66,7 +66,7 @@ Each token should be preceded with `{` and will be active until `}`. Note that `
 
 **F&lt;num&gt;** sets active font, **&lt;num&gt;** should be index of one of the elements from fonts list specified in **--fonts=**.
 
-**S&lt;num&gt;,&lt;num&gt;...** specifies monitors to draw on. Multiple, comma separated, numbers can be specified. If not specified, draws to all available monitors.
+**S&lt;num&gt;,&lt;num&gt;...** specifies monitors to draw on. Multiple, comma separated, numbers can be specified. If not specified, draws to all available monitors. Negative number can be specified to set on which monitors to *not* draw.
 
 **CF0xAARRGGBB** sets active foreground color.
 
