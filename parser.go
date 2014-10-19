@@ -167,8 +167,7 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 	}
 
 	logPieceError := func(err error, pieces ...string) {
-		log.Printf("Parsing `%q`: %s", pieces, err)
-		log.Print(err)
+		log.Printf("Problem parsing `%q`: %s", pieces, err)
 		for _, piece := range pieces {
 			currentText.Text += piece
 		}
