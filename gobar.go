@@ -308,6 +308,13 @@ func (self *Bar) Draw(text []*TextPiece) {
 			subimg := imgs[screen].SubImage(image.Rect(
 				xs, 0, xs+width, int(self.Geometries[screen].Height),
 			))
+			if subimg == nil {
+				log.Printf(
+					"Cannot create Subimage for coords `%dx%dx%dx%d`\n",
+					xs, 0, xs+width, int(self.Geometries[screen].Height),
+				)
+				continue
+			}
 			subimg.For(func(x, y int) xgraphics.BGRA { return *piece.Background })
 
 			new_xs, _, err := subimg.Text(
