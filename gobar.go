@@ -212,6 +212,9 @@ func NewBar(
 	fg uint64, bg uint64, fonts []*Font,
 ) *Bar {
 	windows := make([]*xwindow.Window, len(geometries))
+
+	maxHeight := xwindow.RootGeometry(X).Height()
+
 	for i, geometry := range geometries {
 		win, err := xwindow.Generate(X)
 		fatal(err)
@@ -228,13 +231,15 @@ func NewBar(
 		strutP := ewmh.WmStrutPartial{}
 		strut := ewmh.WmStrut{}
 		if position == BOTTOM {
+			bottom := uint(maxHeight - int(geometry.Y))
+
 			strutP.BottomStartX = uint(geometry.X)
-			strutP.BottomEndX = uint(geometry.X + geometry.Height)
-			strutP.Bottom = uint(geometry.Height)
-			strut.Bottom = uint(geometry.Height)
+			strutP.BottomEndX = uint(geometry.X + geometry.Width)
+			strutP.Bottom = bottom
+			strut.Bottom = bottom
 		} else {
 			strutP.TopStartX = uint(geometry.X)
-			strutP.TopEndX = uint(geometry.X + geometry.Height)
+			strutP.TopEndX = uint(geometry.X + geometry.Width)
 			strutP.Top = uint(geometry.Height)
 			strut.Top = uint(geometry.Height)
 		}
