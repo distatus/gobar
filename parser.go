@@ -85,6 +85,9 @@ func NewTextParser() *TextParser {
 func (self *TextParser) Tokenize(
 	data []byte, EOF bool,
 ) (advance int, token []byte, err error) {
+	if EOF {
+		return
+	}
 	switch {
 	case data[0] == '\n':
 		err = EndScan{}
