@@ -1,5 +1,5 @@
 // gobar
-// Copyright (C) 2014 Karol 'Kenji Takahashi' Woźniak
+// Copyright (C) 2014-2015 Karol 'Kenji Takahashi' Woźniak
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -24,7 +24,7 @@ package main
 import (
 	"bufio"
 	"encoding/xml"
-	"errors"
+	"flag"
 	"fmt"
 	"image"
 	"log"
@@ -42,8 +42,6 @@ import (
 	"github.com/BurntSushi/xgbutil/xinerama"
 	"github.com/BurntSushi/xgbutil/xrect"
 	"github.com/BurntSushi/xgbutil/xwindow"
-
-	"github.com/docopt/docopt-go"
 )
 
 // fatal is a helper function to call when something terribly wrong
@@ -76,6 +74,10 @@ type Font struct {
 	Path string
 	Size float64
 	Font *truetype.Font
+}
+
+func (f *Font) String() string {
+	return fmt.Sprintf("%s:%s", f.Path, f.Size)
 }
 
 // FindFontError is returned when FindFontPath fails to fint any usable fonts.
@@ -350,17 +352,6 @@ func (self *Bar) Draw(text []*TextPiece) {
 	}
 }
 
-// ParseColor parses color string to integer value.
-// If parsing fails, returns fallback instead.
-func ParseColor(color string, fallback uint64) uint64 {
-	result, err := strconv.ParseUint(color, 0, 32)
-	if err != nil {
-		log.Printf("Invalid color `%s`, using default. Got `%s`", color, err)
-		return fallback
-	}
-	return result
-}
-
 // ParseFonts parses a list of stringified font definitions
 // into a list of Font structures.
 // Also handles all kinds of bad input and tries hard to recover from it.
@@ -410,45 +401,45 @@ func ParseFonts(
 	return
 }
 
+type Fonts []*Font
+
+func (f *Fonts) String() string {
+	str := make([]string, len(*f))
+	for i, f := range *f {
+		str[i] = f.String()
+	}
+	return fmt.Sprintf("%q", strings.Join(str, ","))
+}
+
+func (f *Fonts) Set(value string) error {
+	fonts, err := ParseFonts(strings.Split(value, ","), NewFont, FindFontPath)
+	if err != nil {
+		return fmt.Errorf("No usable fonts found")
+	}
+	*f = append(*f, fonts...)
+	return nil
+}
+
 // main gets command line arguments, creates X connection and initializes Bar.
 // This is also where X event loop and Stdin reading lies.
 func main() {
-	cli := `gobar.
+	bottom := flag.Bool("bottom", false, "Place bar at the bottom of the screen")
+	fgColor := flag.Uint64("fg", 0xFFFFFFFF, "Foreground color (0xAARRGGBB)")
+	flag.Lookup("fg").DefValue = "0xFFFFFFFF"
+	bgColor := flag.Uint64("bg", 0xFF000000, "Background color (0xAARRGGBB)")
+	flag.Lookup("bg").DefValue = "0xFF000000"
+	var fonts Fonts
+	flag.Var(&fonts, "fonts", "Comma separated list of fonts in form of path[:size]")
+	geometryStr := flag.String(
+		"geometry",
+		"",
+		"Comma separated list of monitor geometries (<w>x<h>+<x>+<y>), <w>=M means 100%",
+	)
+	flag.Parse()
 
-Usage:
-  gobar [options]
-  gobar -h | --help
-  gobar --version
-
-Options:
-  -h --help              Show this screen.
-  --bottom               Place bar at the bottom of the screen.
-  --geometry=<GEOMETRY>  Comma separated list of monitor geometries in form of
-                         <w>x<h>+<x>+<y>. If not specified, uses Mx16+0+0 for each screen.
-                         M is a special case for <w> only, taking all available space.
-  --fonts=<FONTS>        Comma separated list of fonts in form of path[:size].
-                         Defaults to whatever it can find in fontconfig configuration.
-  --fg=<COLOR>           Foreground color (0xAARRGGBB) [default: 0xFFFFFFFF].
-  --bg=<COLOR>           Background color (0xAARRGGBB) [default: 0xFF000000].
-	`
-
-	arguments, err := docopt.Parse(cli, nil, true, "", false)
-	fatal(err)
-	fgColor := ParseColor(arguments["--fg"].(string), 0xFFFFFFFF)
-	bgColor := ParseColor(arguments["--bg"].(string), 0xFF000000)
-	bottom := arguments["--bottom"].(bool)
 	position := TOP
-	if bottom {
+	if *bottom {
 		position = BOTTOM
-	}
-
-	fontSpecs := []string{}
-	if arguments["--fonts"] != nil {
-		fontSpecs = strings.Split(arguments["--fonts"].(string), ",")
-	}
-	fonts, err := ParseFonts(fontSpecs, NewFont, FindFontPath)
-	if err != nil {
-		fatal(errors.New("No usable fonts found, bailing out"))
 	}
 
 	X, err := xgbutil.NewConn()
@@ -456,10 +447,9 @@ Options:
 	heads, err := xinerama.PhysicalHeads(X)
 	fatal(err)
 
-	geometryStr := arguments["--geometry"]
 	var geometrySpec []string
-	if geometryStr != nil {
-		geometrySpec = strings.Split(geometryStr.(string), ",")
+	if *geometryStr != "" {
+		geometrySpec = strings.Split(*geometryStr, ",")
 	}
 	if len(geometrySpec) < len(heads) {
 		for i := len(geometrySpec); i < len(heads); i++ {
@@ -474,7 +464,7 @@ Options:
 		geometries[i] = NewGeometry(geometrySpec[i], head, position)
 	}
 
-	bar := NewBar(X, geometries, position, fgColor, bgColor, fonts)
+	bar := NewBar(X, geometries, position, *fgColor, *bgColor, fonts)
 	parser := NewTextParser()
 
 	stdin := make(chan []*TextPiece)
