@@ -6,12 +6,11 @@ Supports xinerama, EWMH, font antialiasing and possibly some other fancy looking
 
 ## screenshot
 
-Two **gobar** instances.
+Two **gobar** instances, both fed by [osop](https://github.com/KenjiTakahashi/osop).
 
-Top with some conky metrics.
-Bottom with wingo workspaces (bash + wingo-cmd for now) and date.
+For detailed configuration see [my](https://github.com/KenjiTakahashi/dotfiles/blob/master/dotxprofile) [dotfiles](https://github.com/KenjiTakahashi/dotfiles/tree/master/dotconfig/osop).
 
-![screenshot](https://copy.com/eIedmSWFgREV)
+![screenshot](https://copy.com/u4KQ72D8PXpcfpsj)
 
 ## installation
 
@@ -31,7 +30,7 @@ Command line options reference follows:
 
 **-h --help** displays help message and exits.
 
-**--bottom** places bar on bottom of the screen (default is on top).
+**--bottom** places bar on bottom of the screen *(defaults to false)*.
 
 **--geometries** takes comma separates list of monitor geometries *(defaults to `0x16+0+0`)*.
 
@@ -41,7 +40,7 @@ If geometry is empty, bar is not drawn on a respective monitor.
 
 If there are less geometries than monitors, last geometry is used for subsequent monitors.
 
-**--fonts=** takes comma separated list of fonts.
+**--fonts** takes comma separated list of fonts.
 
 Each font element is in form of `<ttf file path>[:<font size>]`.
 
@@ -49,9 +48,9 @@ If omitted, or if incorrect path is specified, defaults to whatever it can find 
 
 If `<font size>` part is omitted or incorrect, defaults to `12`.
 
-**--fg=** takes main foreground color. Should be in form `0xAARRGGBB`.
+**--fg** takes main foreground color. Should be in form `0xAARRGGBB` *(defaults to `0xFFFFFFFF`)*.
 
-**--bg=** takes main background color. Should be in form `0xAARRGGBB`.
+**--bg** takes main background color. Should be in form `0xAARRGGBB` *(defaults to `0xFF000000`)*.
 
 Other than that, an input string should be piped into the **gobar** executable.
 
