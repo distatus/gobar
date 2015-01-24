@@ -1,5 +1,5 @@
 // gobar
-// Copyright (C) 2014 Karol 'Kenji Takahashi' Woźniak
+// Copyright (C) 2014-2015 Karol 'Kenji Takahashi' Woźniak
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"testing"
 
@@ -135,4 +136,70 @@ func TestParseFonts(t *testing.T) {
 			assert.Equal(t, actual_log, expected_log, fmt.Sprintf("%d", i))
 		}
 	}
+}
+
+func TestGeometriesSet(t *testing.T) {
+	tests := []struct {
+		input  string
+		logs   string
+		output Geometries
+	}{
+		{"", "", Geometries{}},
+		{"0x16+0+0", "", Geometries{
+			{0, 16, 0, 0},
+		}},
+		{",0x16+0+0", "", Geometries{
+			nil,
+			{0, 16, 0, 0},
+		}},
+		{"0x16+0+0,", "", Geometries{
+			{0, 16, 0, 0},
+			nil,
+		}},
+		{",0x16+0+0,", "", Geometries{
+			nil,
+			{0, 16, 0, 0},
+			nil,
+		}},
+		{"22x01+20+15", "", Geometries{
+			{22, 1, 20, 15},
+		}},
+		{",0x16+0+0,22x01+20+15,", "", Geometries{
+			nil,
+			{0, 16, 0, 0},
+			{22, 1, 20, 15},
+			nil,
+		}},
+		{",0x16+0+0,,22x01+20+15,", "", Geometries{
+			nil,
+			{0, 16, 0, 0},
+			nil,
+			{22, 1, 20, 15},
+			nil,
+		}},
+		{"wrongo", "Bad geometry `wrongo`, using default\n", Geometries{
+			{0, 16, 0, 0},
+		}},
+	}
+
+	var stderr bytes.Buffer
+	log.SetOutput(&stderr)
+
+	for i, test := range tests {
+		geometries := Geometries{}
+
+		geometries.Set(test.input)
+		logs, _ := stderr.ReadString('\n')
+
+		assert.Equal(t, test.output, geometries, fmt.Sprintf("%d", i))
+		if logs != "" {
+			assert.Equal(t, test.logs, logs[20:], fmt.Sprintf("%d", i))
+		}
+	}
+
+	geometries := Geometries{{0, 16, 0, 0}}
+	err := geometries.Set("")
+	assert.Equal(t, fmt.Errorf("geometries flag already set"), err)
+
+	log.SetOutput(os.Stderr)
 }

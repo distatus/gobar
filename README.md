@@ -33,11 +33,13 @@ Command line options reference follows:
 
 **--bottom** places bar on bottom of the screen (default is on top).
 
-**--geometry=** takes comma separated list of monitor geometries.
+**--geometries** takes comma separates list of monitor geometries *(defaults to `0x16+0+0`)*.
 
-Each geometry element is in form of `<width>x<height>+<x>+<y>`. Where `<width>` can also take a special value of `M`, meaning "take all available space".
+Each geometry is in form of `<width>x<height>+<x>+<y>`. If `<width>`/`<height>` is `0`, screen width/height is used.
 
-If omitted, or if number of specified geometries is lower than number of monitors, a default of `Mx16+0+0` is used for not specified monitors.
+If geometry is empty, bar is not drawn on a respective monitor.
+
+If there are less geometries than monitors, last geometry is used for subsequent monitors.
 
 **--fonts=** takes comma separated list of fonts.
 

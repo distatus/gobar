@@ -40,7 +40,6 @@ import (
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xgraphics"
 	"github.com/BurntSushi/xgbutil/xinerama"
-	"github.com/BurntSushi/xgbutil/xrect"
 	"github.com/BurntSushi/xgbutil/xwindow"
 )
 
@@ -157,43 +156,8 @@ type Geometry struct {
 	Y      uint16
 }
 
-// NewGeometry parses geometry from textual definition.
-// Input should be formatted as <width>x<height>+<x>+<y>.
-// A special "M" value is allowed as <width>, to represent 100%.
-func NewGeometry(geostr string, head xrect.Rect, position Position) *Geometry {
-	geometry := Geometry{}
-	var widthS string
-	_, err := fmt.Sscanf(
-		geostr, "%1sx%d+%d+%d",
-		&widthS, &geometry.Height, &geometry.X, &geometry.Y,
-	)
-
-	geometry.X += uint16(head.X())
-
-	hwidth := uint16(head.Width())
-	hheight := uint16(head.Height())
-	if err != nil {
-		log.Print("bad geometry, ", geometry, ", using default")
-		geometry.Width = hwidth - (geometry.X - uint16(head.X()))
-		geometry.Height = 16
-	} else {
-		width, err := strconv.Atoi(widthS)
-		if err != nil {
-			if widthS != "M" {
-				// Make people feel guilty
-				log.Print("wrong geometry width")
-			}
-			geometry.Width = hwidth - (geometry.X - uint16(head.X()))
-		} else {
-			geometry.Width = uint16(width)
-		}
-	}
-
-	if position == BOTTOM {
-		geometry.Y = uint16(head.Y()) + hheight - geometry.Height - geometry.Y
-	}
-
-	return &geometry
+func (g *Geometry) String() string {
+	return fmt.Sprintf("%dx%d+%d+%d", g.Width, g.Height, g.X, g.Y)
 }
 
 // Bar stores and manages all X related stuff and configuration.
@@ -213,52 +177,92 @@ func NewBar(
 	X *xgbutil.XUtil, geometries []*Geometry, position Position,
 	fg uint64, bg uint64, fonts []*Font,
 ) *Bar {
-	windows := make([]*xwindow.Window, len(geometries))
+	heads, err := xinerama.PhysicalHeads(X)
+	fatal(err)
+
+	bar := &Bar{
+		X:          X,
+		Windows:    []*xwindow.Window{},
+		Geometries: []*Geometry{},
+		Foreground: NewBGRA(fg),
+		Background: NewBGRA(bg),
+		Fonts:      fonts,
+	}
 
 	maxHeight := xwindow.RootGeometry(X).Height()
 
-	for i, geometry := range geometries {
+	if len(geometries) == 0 {
+		geometries = append(geometries, &Geometry{Height: 16})
+	}
+	for i, head := range heads {
+		var geometry *Geometry
+		if i >= len(geometries) {
+			if geometries[len(geometries)-1] == nil {
+				break
+			}
+			geometry = geometries[len(geometries)-1]
+		} else {
+			if geometries[i] == nil {
+				continue
+			}
+			geometry = geometries[i]
+		}
 		win, err := xwindow.Generate(X)
-		fatal(err)
+		if err != nil {
+			log.Printf("Could not generate window for geometry `%s`", geometry)
+			continue
+		}
+
+		width := int(geometry.Width)
+		if width == 0 {
+			width = head.Width()
+		}
+		height := int(geometry.Height)
+		if height == 0 {
+			height = head.Height()
+		}
+		y := int(geometry.Y)
+
+		strutP := ewmh.WmStrutPartial{}
+		strut := ewmh.WmStrut{}
+		if position == BOTTOM {
+			y = head.Height() - height - y
+			bottom := uint(maxHeight - y)
+
+			strutP.BottomStartX = uint(geometry.X)
+			strutP.BottomEndX = uint(geometry.X + uint16(width))
+			strutP.Bottom = bottom
+			strut.Bottom = bottom
+		} else {
+			strutP.TopStartX = uint(geometry.X)
+			strutP.TopEndX = uint(geometry.X + uint16(width))
+			strutP.Top = uint(height)
+			strut.Top = uint(height)
+		}
+
 		win.Create(
 			X.RootWin(),
-			int(geometry.X), int(geometry.Y),
-			int(geometry.Width), int(geometry.Height),
-			0,
+			int(geometry.X)+head.X(),
+			y+head.Y(),
+			width, height, 0,
 		)
 
 		ewmh.WmWindowTypeSet(X, win.Id, []string{"_NET_WM_WINDOW_TYPE_DOCK"})
 		ewmh.WmStateSet(X, win.Id, []string{"_NET_WM_STATE_STICKY"})
 		ewmh.WmDesktopSet(X, win.Id, 0xFFFFFFFF)
-		strutP := ewmh.WmStrutPartial{}
-		strut := ewmh.WmStrut{}
-		if position == BOTTOM {
-			bottom := uint(maxHeight - int(geometry.Y))
-
-			strutP.BottomStartX = uint(geometry.X)
-			strutP.BottomEndX = uint(geometry.X + geometry.Width)
-			strutP.Bottom = bottom
-			strut.Bottom = bottom
-		} else {
-			strutP.TopStartX = uint(geometry.X)
-			strutP.TopEndX = uint(geometry.X + geometry.Width)
-			strutP.Top = uint(geometry.Height)
-			strut.Top = uint(geometry.Height)
-		}
 		ewmh.WmStrutPartialSet(X, win.Id, &strutP)
 		ewmh.WmStrutSet(X, win.Id, &strut)
 
-		windows[i] = win
+		bar.Windows = append(bar.Windows, win)
+		bar.Geometries = append(bar.Geometries, &Geometry{
+			X:      geometry.X,
+			Y:      uint16(y),
+			Width:  uint16(width),
+			Height: uint16(height),
+		})
 	}
 
-	return &Bar{
-		X:          X,
-		Windows:    windows,
-		Geometries: geometries,
-		Foreground: NewBGRA(fg),
-		Background: NewBGRA(bg),
-		Fonts:      fonts,
-	}
+	return bar
 }
 
 // Draw draws TextPieces into X monitors.
@@ -420,6 +424,46 @@ func (f *Fonts) Set(value string) error {
 	return nil
 }
 
+type Geometries []*Geometry
+
+func (g *Geometries) String() string {
+	str := make([]string, len(*g))
+	for i, g := range *g {
+		str[i] = g.String()
+	}
+	j := strings.Join(str, ",")
+	if j == "" {
+		j = "0x16+0+0"
+	}
+	return fmt.Sprintf("%q", j)
+}
+
+func (g *Geometries) Set(value string) error {
+	if len(*g) > 0 {
+		return fmt.Errorf("geometries flag already set")
+	}
+	if value == "" {
+		return nil
+	}
+	for _, geometry := range strings.Split(value, ",") {
+		if geometry == "" {
+			*g = append(*g, nil)
+		} else {
+			geom := &Geometry{}
+			_, err := fmt.Sscanf(
+				geometry, "%dx%d+%d+%d",
+				&geom.Width, &geom.Height, &geom.X, &geom.Y,
+			)
+			if err != nil {
+				geom = &Geometry{Height: 16}
+				log.Printf("Bad geometry `%s`, using default", geometry)
+			}
+			*g = append(*g, geom)
+		}
+	}
+	return nil
+}
+
 // main gets command line arguments, creates X connection and initializes Bar.
 // This is also where X event loop and Stdin reading lies.
 func main() {
@@ -430,11 +474,8 @@ func main() {
 	flag.Lookup("bg").DefValue = "0xFF000000"
 	var fonts Fonts
 	flag.Var(&fonts, "fonts", "Comma separated list of fonts in form of path[:size]")
-	geometryStr := flag.String(
-		"geometry",
-		"",
-		"Comma separated list of monitor geometries (<w>x<h>+<x>+<y>), <w>=M means 100%",
-	)
+	var geometries Geometries
+	flag.Var(&geometries, "geometries", "Comma separated list of monitor geometries (<w>x<h>+<x>+<y>), for <w> and <h>, 0 means 100%")
 	flag.Parse()
 
 	position := TOP
@@ -444,25 +485,6 @@ func main() {
 
 	X, err := xgbutil.NewConn()
 	fatal(err)
-	heads, err := xinerama.PhysicalHeads(X)
-	fatal(err)
-
-	var geometrySpec []string
-	if *geometryStr != "" {
-		geometrySpec = strings.Split(*geometryStr, ",")
-	}
-	if len(geometrySpec) < len(heads) {
-		for i := len(geometrySpec); i < len(heads); i++ {
-			geometrySpec = append(
-				geometrySpec, "Mx16+0+0",
-			)
-		}
-	}
-
-	geometries := make([]*Geometry, len(heads))
-	for i, head := range heads {
-		geometries[i] = NewGeometry(geometrySpec[i], head, position)
-	}
 
 	bar := NewBar(X, geometries, position, *fgColor, *bgColor, fonts)
 	parser := NewTextParser()
