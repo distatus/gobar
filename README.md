@@ -32,7 +32,7 @@ Command line options reference follows:
 
 **--bottom** places bar on bottom of the screen *(defaults to false)*.
 
-**--geometries** takes comma separates list of monitor geometries *(defaults to `0x16+0+0`)*.
+**--geometries** takes comma separated list of monitor geometries *(defaults to `0x16+0+0`)*.
 
 Each geometry is in form of `<width>x<height>+<x>+<y>`. If `<width>`/`<height>` is `0`, screen width/height is used.
 
