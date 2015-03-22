@@ -1,5 +1,5 @@
 // gobar
-// Copyright (C) 2014 Karol 'Kenji Takahashi' Woźniak
+// Copyright (C) 2014-2015 Karol 'Kenji Takahashi' Woźniak
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -22,13 +22,12 @@
 package main
 
 import (
-	"fmt"
+	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/BurntSushi/xgbutil/xgraphics"
-
-	"github.com/stretchr/testify/assert"
 )
 
 var TokenizeTests = []struct {
@@ -51,6 +50,21 @@ var TokenizeTests = []struct {
 	{"5942130", 7, "5942130"},
 }
 
+func assertEqual(t *testing.T, input, expected, actual interface{}, name string, i int) {
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("%s:%d(%v) == %v != %v\n", name, i, input, actual, expected)
+	}
+}
+
+func assertEqualError(t *testing.T, expected, actual error, name string, i int) {
+	if actual == nil && expected == nil {
+		return
+	}
+	if (actual == nil && expected != nil) || expected.Error() != actual.Error() {
+		t.Errorf("%s:%d expected error `%s`, got `%s`\n", name, i, expected, actual)
+	}
+}
+
 func TestTokenize(t *testing.T) {
 	parser := NewTextParser()
 
@@ -63,20 +77,21 @@ func TestTokenize(t *testing.T) {
 
 		advanceActual, tokenActual, err := parser.Tokenize(input, false)
 
-		assert.NoError(t, err)
-		assert.Equal(t, tt.advanceExpected, advanceActual)
-		assert.Equal(t, []byte(tt.tokenExpected), tokenActual)
+		assertEqualError(t, nil, err, "Tokenize", 0)
+		assertEqual(t, tt.input, tt.advanceExpected, advanceActual, "Tokenize", 0)
+		assertEqual(t, tt.input, []byte(tt.tokenExpected), tokenActual, "Tokenize", 0)
 	}
 }
 
 func TestTokenize_newline(t *testing.T) {
 	parser := NewTextParser()
 
-	advance, token, err := parser.Tokenize([]byte("\ntest"), false)
+	input := "\ntest"
+	advance, token, err := parser.Tokenize([]byte(input), false)
 
-	assert.Equal(t, 0, advance)
-	assert.Equal(t, []byte(nil), token)
-	assert.EqualError(t, err, "EndScan")
+	assertEqual(t, input, 0, advance, "Tokenize_newline", 0)
+	assertEqual(t, input, []byte(nil), token, "Tokenize_newline", 0)
+	assertEqualError(t, errors.New("EndScan"), err, "Tokenize_newline", 0)
 }
 
 var ScanTests = []struct {
@@ -199,9 +214,14 @@ func TestScan(t *testing.T) {
 			t.Origin = nil
 		}
 
-		assert.Equal(
-			t, tt.expected, actual,
-			fmt.Sprintf("%d: Scan(%q) => %q != %q", i, tt.input, actual, tt.expected),
-		)
+		assertEqual(t, tt.input, tt.expected, actual, "Scan", i)
+	}
+}
+
+func BenchmarkScan(b *testing.B) {
+	parser := NewTextParser()
+
+	for i := 0; i < b.N; i++ {
+		parser.Scan(strings.NewReader("{F1{S2test1}test2}test3"))
 	}
 }

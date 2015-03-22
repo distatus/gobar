@@ -29,8 +29,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func newFontMock(path string, size float64) (*Font, error) {
@@ -112,16 +110,13 @@ func TestParseFonts(t *testing.T) {
 
 		actual, err := ParseFonts(tt.input, newFontMock, findFontMock)
 
-		assert.Equal(
-			t, tt.fontExpected, actual,
-			fmt.Sprintf("%d: %q => %q != %q", i, tt.input, actual, tt.fontExpected),
-		)
-		assert.Equal(t, tt.errExpected, err)
+		assertEqual(t, tt.input, tt.fontExpected, actual, "ParseFonts", i)
+		assertEqualError(t, tt.errExpected, err, "ParseFonts", i)
 
 		for _, logExpected := range tt.logExpected {
 			logActual, err := stderr.ReadString('\n')
-			if err != nil {
-				assert.Error(t, err)
+			if err != nil && err.Error() != "EOF" {
+				t.Errorf("ERROR `%s` READING STDERR", err)
 			}
 
 			if len(logActual) > 0 {
@@ -133,7 +128,7 @@ func TestParseFonts(t *testing.T) {
 				}
 			}
 
-			assert.Equal(t, logActual, logExpected, fmt.Sprintf("%d", i))
+			assertEqual(t, tt.input, logActual, logExpected, "ParseFonts", i)
 		}
 	}
 }
@@ -191,15 +186,15 @@ func TestGeometriesSet(t *testing.T) {
 		geometries.Set(test.input)
 		logs, _ := stderr.ReadString('\n')
 
-		assert.Equal(t, test.output, geometries, fmt.Sprintf("%d", i))
+		assertEqual(t, test.input, test.output, geometries, "GeometriesSet", i)
 		if logs != "" {
-			assert.Equal(t, test.logs, logs[20:], fmt.Sprintf("%d", i))
+			assertEqual(t, test.input, test.logs, logs[20:], "GeometriesSet", i)
 		}
 	}
 
 	geometries := Geometries{{0, 16, 0, 0}}
 	err := geometries.Set("")
-	assert.Equal(t, fmt.Errorf("geometries flag already set"), err)
+	assertEqualError(t, fmt.Errorf("geometries flag already set"), err, "GeometriesSet", -1)
 
 	log.SetOutput(os.Stderr)
 }
