@@ -35,6 +35,7 @@ import (
 
 	"code.google.com/p/jamslam-freetype-go/freetype/truetype"
 
+	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/ewmh"
 	"github.com/BurntSushi/xgbutil/xevent"
@@ -58,6 +59,21 @@ func contains(slice []uint, item uint) bool {
 		}
 	}
 	return false
+}
+
+// headsEqual Checks whether Rects contained in xinerama.Heads are all equal.
+func headsEqual(h1, h2 xinerama.Heads) bool {
+	if len(h1) != len(h2) {
+		return false
+	}
+	for i, h := range h1 {
+		x1, y1, w1, h1 := h.Pieces()
+		x2, y2, w2, h2 := h2[i].Pieces()
+		if x1 != x2 || y1 != y2 || w1 != w2 || h1 != h2 {
+			return false
+		}
+	}
+	return true
 }
 
 // Position defines bar placement on the screen.
@@ -169,10 +185,13 @@ type Bar struct {
 	Background *xgraphics.BGRA
 	Colors     []*xgraphics.BGRA
 	Fonts      []*Font
+
+	heads xinerama.Heads
 }
 
 // NewBar creates X windows for every monitor.
-// Also sets proper EWMH information for docked windows.
+// Also sets proper EWMH information for docked windows and
+// deals with dynamic geometry changes.
 func NewBar(
 	X *xgbutil.XUtil, geometries []*Geometry, position Position,
 	fg uint64, bg uint64, fonts []*Font,
@@ -187,14 +206,48 @@ func NewBar(
 		Foreground: NewBGRA(fg),
 		Background: NewBGRA(bg),
 		Fonts:      fonts,
+		heads:      heads,
 	}
 
-	maxHeight := xwindow.RootGeometry(X).Height()
+	bar.create(geometries, position)
+
+	xproto.ChangeWindowAttributesChecked(
+		X.Conn(), X.RootWin(), xproto.CwEventMask,
+		[]uint32{xproto.EventMaskStructureNotify},
+	)
+	xevent.ConfigureNotifyFun(func(_ *xgbutil.XUtil, _ xevent.ConfigureNotifyEvent) {
+		heads, err = xinerama.PhysicalHeads(X)
+		if err != nil {
+			log.Printf("Error `%s` getting updated heads, staying with the old ones\n", err)
+			return
+		}
+		if !headsEqual(heads, bar.heads) {
+			bar.destroy()
+			bar.heads = heads
+			bar.create(geometries, position)
+		}
+	}).Connect(X, X.RootWin())
+
+	return bar
+}
+
+// destroy Destroys all existing windows and resets geometries.
+func (b *Bar) destroy() {
+	for i, window := range b.Windows {
+		window.Destroy()
+		b.Windows[i] = nil
+	}
+	b.Windows = []*xwindow.Window{}
+	b.Geometries = []*Geometry{}
+}
+
+func (b *Bar) create(geometries []*Geometry, position Position) {
+	maxHeight := xwindow.RootGeometry(b.X).Height()
 
 	if len(geometries) == 0 {
 		geometries = append(geometries, &Geometry{Height: 16})
 	}
-	for i, head := range heads {
+	for i, head := range b.heads {
 		var geometry *Geometry
 		if i >= len(geometries) {
 			if geometries[len(geometries)-1] == nil {
@@ -207,7 +260,7 @@ func NewBar(
 			}
 			geometry = geometries[i]
 		}
-		win, err := xwindow.Generate(X)
+		win, err := xwindow.Generate(b.X)
 		if err != nil {
 			log.Printf("Could not generate window for geometry `%s`", geometry)
 			continue
@@ -241,28 +294,26 @@ func NewBar(
 		}
 
 		win.Create(
-			X.RootWin(),
+			b.X.RootWin(),
 			int(geometry.X)+head.X(),
 			y+head.Y(),
 			width, height, 0,
 		)
 
-		ewmh.WmWindowTypeSet(X, win.Id, []string{"_NET_WM_WINDOW_TYPE_DOCK"})
-		ewmh.WmStateSet(X, win.Id, []string{"_NET_WM_STATE_STICKY"})
-		ewmh.WmDesktopSet(X, win.Id, 0xFFFFFFFF)
-		ewmh.WmStrutPartialSet(X, win.Id, &strutP)
-		ewmh.WmStrutSet(X, win.Id, &strut)
+		ewmh.WmWindowTypeSet(b.X, win.Id, []string{"_NET_WM_WINDOW_TYPE_DOCK"})
+		ewmh.WmStateSet(b.X, win.Id, []string{"_NET_WM_STATE_STICKY"})
+		ewmh.WmDesktopSet(b.X, win.Id, 0xFFFFFFFF)
+		ewmh.WmStrutPartialSet(b.X, win.Id, &strutP)
+		ewmh.WmStrutSet(b.X, win.Id, &strut)
 
-		bar.Windows = append(bar.Windows, win)
-		bar.Geometries = append(bar.Geometries, &Geometry{
+		b.Windows = append(b.Windows, win)
+		b.Geometries = append(b.Geometries, &Geometry{
 			X:      geometry.X,
 			Y:      uint16(y),
 			Width:  uint16(width),
 			Height: uint16(height),
 		})
 	}
-
-	return bar
 }
 
 // Draw draws TextPieces into X monitors.
@@ -304,7 +355,7 @@ func (self *Bar) Draw(text []*TextPiece) {
 			}
 		} else {
 			for _, screen := range piece.Screens {
-				if !contains(piece.NotScreens, screen) {
+				if int(screen) < len(xsl) && !contains(piece.NotScreens, screen) {
 					screens = append(screens, screen)
 				}
 			}
