@@ -52,9 +52,9 @@ func findFontMockFactory(value string) FontFinder {
 var ParseFontsTests = []struct {
 	findFontValue string
 	input         []string
-	expected      []*Font
-	expected_log  []string
-	expected_err  error
+	fontExpected  []*Font
+	logExpected   []string
+	errExpected   error
 }{
 	{
 		"mock1", []string{"test1:14"},
@@ -113,27 +113,27 @@ func TestParseFonts(t *testing.T) {
 		actual, err := ParseFonts(tt.input, newFontMock, findFontMock)
 
 		assert.Equal(
-			t, tt.expected, actual,
-			fmt.Sprintf("%d: %q => %q != %q", i, tt.input, actual, tt.expected),
+			t, tt.fontExpected, actual,
+			fmt.Sprintf("%d: %q => %q != %q", i, tt.input, actual, tt.fontExpected),
 		)
-		assert.Equal(t, tt.expected_err, err)
+		assert.Equal(t, tt.errExpected, err)
 
-		for _, expected_log := range tt.expected_log {
-			actual_log, err := stderr.ReadString('\n')
+		for _, logExpected := range tt.logExpected {
+			logActual, err := stderr.ReadString('\n')
 			if err != nil {
 				assert.Error(t, err)
 			}
 
-			if len(actual_log) > 0 {
-				got_idx := strings.Index(actual_log, ". Got")
-				if got_idx == -1 {
-					actual_log = actual_log[20 : len(actual_log)-1]
+			if len(logActual) > 0 {
+				gotIdx := strings.Index(logActual, ". Got")
+				if gotIdx == -1 {
+					logActual = logActual[20 : len(logActual)-1]
 				} else {
-					actual_log = actual_log[20 : got_idx+5]
+					logActual = logActual[20 : gotIdx+5]
 				}
 			}
 
-			assert.Equal(t, actual_log, expected_log, fmt.Sprintf("%d", i))
+			assert.Equal(t, logActual, logExpected, fmt.Sprintf("%d", i))
 		}
 	}
 }

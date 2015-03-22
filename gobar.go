@@ -92,7 +92,7 @@ type Font struct {
 }
 
 func (f *Font) String() string {
-	return fmt.Sprintf("%s:%s", f.Path, f.Size)
+	return fmt.Sprintf("%s:%f", f.Path, f.Size)
 }
 
 // FindFontError is returned when FindFontPath fails to fint any usable fonts.
@@ -317,33 +317,33 @@ func (b *Bar) create(geometries []*Geometry, position Position) {
 }
 
 // Draw draws TextPieces into X monitors.
-func (self *Bar) Draw(text []*TextPiece) {
-	imgs := make([]*xgraphics.Image, len(self.Windows))
-	for i, geometry := range self.Geometries {
-		imgs[i] = xgraphics.New(self.X, image.Rect(
+func (b *Bar) Draw(text []*TextPiece) {
+	imgs := make([]*xgraphics.Image, len(b.Windows))
+	for i, geometry := range b.Geometries {
+		imgs[i] = xgraphics.New(b.X, image.Rect(
 			0, 0, int(geometry.Width), int(geometry.Height),
 		))
-		imgs[i].For(func(x, y int) xgraphics.BGRA { return *self.Background })
+		imgs[i].For(func(x, y int) xgraphics.BGRA { return *b.Background })
 	}
 
-	xsl := make([]int, len(self.Windows))
-	xsr := make([]int, len(self.Windows))
+	xsl := make([]int, len(b.Windows))
+	xsr := make([]int, len(b.Windows))
 	for i := range xsr {
-		xsr[i] = int(self.Geometries[i].Width)
+		xsr[i] = int(b.Geometries[i].Width)
 	}
 	for _, piece := range text {
 		if piece.Background == nil {
-			piece.Background = self.Background
+			piece.Background = b.Background
 		}
 		if piece.Foreground == nil {
-			piece.Foreground = self.Foreground
+			piece.Foreground = b.Foreground
 		}
 
-		if piece.Font > uint(len(self.Fonts))-1 {
+		if piece.Font > uint(len(b.Fonts))-1 {
 			log.Printf("Invalid font index `%d`, using 0", piece.Font)
 			piece.Font = 0
 		}
-		font := self.Fonts[piece.Font]
+		font := b.Fonts[piece.Font]
 		width, _ := xgraphics.Extents(font.Font, font.Size, piece.Text)
 
 		screens := []uint{}
@@ -368,18 +368,18 @@ func (self *Bar) Draw(text []*TextPiece) {
 			}
 
 			subimg := imgs[screen].SubImage(image.Rect(
-				xs, 0, xs+width, int(self.Geometries[screen].Height),
+				xs, 0, xs+width, int(b.Geometries[screen].Height),
 			))
 			if subimg == nil {
 				log.Printf(
 					"Cannot create Subimage for coords `%dx%dx%dx%d`\n",
-					xs, 0, xs+width, int(self.Geometries[screen].Height),
+					xs, 0, xs+width, int(b.Geometries[screen].Height),
 				)
 				continue
 			}
 			subimg.For(func(x, y int) xgraphics.BGRA { return *piece.Background })
 
-			new_xs, _, err := subimg.Text(
+			xsNew, _, err := subimg.Text(
 				xs, 0, piece.Foreground, font.Size, font.Font, piece.Text,
 			)
 			if err != nil {
@@ -387,23 +387,23 @@ func (self *Bar) Draw(text []*TextPiece) {
 			}
 
 			if piece.Align == LEFT {
-				xsl[screen] = new_xs
+				xsl[screen] = xsNew
 			} else if piece.Align == RIGHT {
 				xsr[screen] -= width
 			}
 
-			subimg.XPaint(self.Windows[screen].Id)
+			subimg.XPaint(b.Windows[screen].Id)
 			subimg.Destroy()
 		}
 	}
 
 	for i, img := range imgs {
-		img.XSurfaceSet(self.Windows[i].Id)
+		img.XSurfaceSet(b.Windows[i].Id)
 		img.XDraw()
-		img.XPaint(self.Windows[i].Id)
+		img.XPaint(b.Windows[i].Id)
 		img.Destroy()
 
-		self.Windows[i].Map()
+		b.Windows[i].Map()
 	}
 }
 

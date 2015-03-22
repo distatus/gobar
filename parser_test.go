@@ -32,9 +32,9 @@ import (
 )
 
 var TokenizeTests = []struct {
-	input            string
-	expected_advance int
-	expected_token   string
+	input           string
+	advanceExpected int
+	tokenExpected   string
 }{
 	{"t", 1, "t"},
 	{"te", 1, "t"},
@@ -61,11 +61,11 @@ func TestTokenize(t *testing.T) {
 			input[i] = byte(s)
 		}
 
-		actual_advance, actual_token, err := parser.Tokenize(input, false)
+		advanceActual, tokenActual, err := parser.Tokenize(input, false)
 
 		assert.NoError(t, err)
-		assert.Equal(t, tt.expected_advance, actual_advance)
-		assert.Equal(t, []byte(tt.expected_token), actual_token)
+		assert.Equal(t, tt.advanceExpected, advanceActual)
+		assert.Equal(t, []byte(tt.tokenExpected), tokenActual)
 	}
 }
 
@@ -84,10 +84,10 @@ var ScanTests = []struct {
 	expected []*TextPiece
 }{
 	{"test", []*TextPiece{
-		&TextPiece{Text: "test"},
+		{Text: "test"},
 	}},
 	{"{F1test}", []*TextPiece{
-		&TextPiece{Text: "test", Font: 1},
+		{Text: "test", Font: 1},
 	}},
 	{"{CF0xFF00AA33test}", []*TextPiece{
 		{Text: "test", Foreground: &xgraphics.BGRA{B: 0x33, G: 0xAA, R: 0x00, A: 0xFF}},

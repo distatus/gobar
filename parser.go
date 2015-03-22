@@ -82,7 +82,7 @@ func NewTextParser() *TextParser {
 
 // Tokenize turns textual definition into a series of valid tokens.
 // If no valid token is found at given place, char at 0 position is returned.
-func (self *TextParser) Tokenize(
+func (tp *TextParser) Tokenize(
 	data []byte, EOF bool,
 ) (advance int, token []byte, err error) {
 	if EOF {
@@ -105,7 +105,7 @@ func (self *TextParser) Tokenize(
 		advance, token, err = 3, data[:3], nil
 	case string(data[:3]) == "{AR":
 		advance, token, err = 3, data[:3], nil
-	case len(data) >= 10 && self.rgbPattern.Match(data[:10]):
+	case len(data) >= 10 && tp.rgbPattern.Match(data[:10]):
 		advance, token, err = 10, data[:10], nil
 	case ('0' <= data[0] && data[0] <= '9') || data[0] == '-':
 		i := 0
@@ -116,7 +116,7 @@ func (self *TextParser) Tokenize(
 			if !('0' <= n && n <= '9') {
 				break
 			}
-			i += 1
+			i++
 		}
 		advance, token, err = i, data[:i], nil
 	default: // Also contains '}' and ','
@@ -129,12 +129,12 @@ func (self *TextParser) Tokenize(
 
 // Scan scans textual definition and returns array of TextPieces.
 // Possible empty pieces are omitted in the returned array.
-func (self *TextParser) Scan(r io.Reader) []*TextPiece {
+func (tp *TextParser) Scan(r io.Reader) []*TextPiece {
 	var text []*TextPiece
 
 	scanner := bufio.NewScanner(r)
 
-	scanner.Split(self.Tokenize)
+	scanner.Split(tp.Tokenize)
 
 	currentText := &TextPiece{}
 	text = append(text, currentText)
@@ -230,10 +230,10 @@ func (self *TextParser) Scan(r io.Reader) []*TextPiece {
 			newCurrent := moveCurrent(false)
 			newCurrent.Align = RIGHT
 		case !escaping && stext == "{":
-			bracketing += 1
+			bracketing++
 		case !escaping && stext == "}":
 			if bracketing > 0 {
-				bracketing -= 1
+				bracketing--
 				continue
 			}
 			screening = false
