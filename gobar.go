@@ -33,8 +33,7 @@ import (
 	"strconv"
 	"strings"
 
-	"code.google.com/p/jamslam-freetype-go/freetype/truetype"
-
+	"github.com/BurntSushi/freetype-go/freetype/truetype"
 	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/ewmh"
@@ -377,9 +376,11 @@ func (b *Bar) Draw(text []*TextPiece) {
 				)
 				continue
 			}
-			subimg.For(func(x, y int) xgraphics.BGRA { return *piece.Background })
+			subximg := subimg.(*xgraphics.Image)
 
-			xsNew, _, err := subimg.Text(
+			subximg.For(func(x, y int) xgraphics.BGRA { return *piece.Background })
+
+			xsNew, _, err := subximg.Text(
 				xs, 0, piece.Foreground, font.Size, font.Font, piece.Text,
 			)
 			if err != nil {
@@ -392,8 +393,8 @@ func (b *Bar) Draw(text []*TextPiece) {
 				xsr[screen] -= width
 			}
 
-			subimg.XPaint(b.Windows[screen].Id)
-			subimg.Destroy()
+			subximg.XPaint(b.Windows[screen].Id)
+			subximg.Destroy()
 		}
 	}
 
