@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/KenjiTakahashi/gobar.png?branch=master)](https://travis-ci.org/KenjiTakahashi/gobar)
+[![Build Status](https://travis-ci.org/distatus/gobar.png?branch=master)](https://travis-ci.org/distatus/gobar)
 
 **gobar** is a minimalistic X status bar written in pure Go.
 
@@ -6,7 +6,7 @@ Supports xinerama, EWMH, font antialiasing and possibly some other fancy looking
 
 ## screenshot
 
-Two **gobar** instances, both fed by [osop](https://github.com/KenjiTakahashi/osop).
+Two **gobar** instances, both fed by [osop](https://github.com/distatus/osop).
 
 For detailed configuration see [my](https://github.com/KenjiTakahashi/dotfiles/blob/master/dotxprofile) [dotfiles](https://github.com/KenjiTakahashi/dotfiles/tree/master/dotconfig/osop).
 
@@ -19,7 +19,7 @@ First, you have to [get Go](http://golang.org/doc/install). Note that version >=
 Then, just
 
 ```bash
-$ go get github.com/KenjiTakahashi/gobar
+$ go get github.com/distatus/gobar
 ```
 
 should get you going.
