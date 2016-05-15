@@ -10,7 +10,7 @@ Two **gobar** instances, both fed by [osop](https://github.com/distatus/osop).
 
 For detailed configuration see [my](https://github.com/KenjiTakahashi/dotfiles/blob/master/dotxprofile) [dotfiles](https://github.com/KenjiTakahashi/dotfiles/tree/master/dotconfig/osop).
 
-![screenshot](https://copy.com/u4KQ72D8PXpcfpsj)
+![screenshot](http://img.kenji.sx/gobar_dual.png)
 
 ## installation
 
