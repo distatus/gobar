@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/distatus/gobar.png?branch=master)](https://travis-ci.org/distatus/gobar)
+[![Build Status](https://github.com/distatus/gobar/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/distatus/gobar/actions/workflows/tests.yml)
 
 **gobar** is a minimalistic X status bar written in pure Go.
 
