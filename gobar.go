@@ -1,5 +1,6 @@
 // gobar
-// Copyright (C) 2014-2015 Karol 'Kenji Takahashi' Woźniak
+//
+// Copyright (C) 2014-2015,2022 Karol 'Kenji Takahashi' Woźniak
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -23,24 +24,22 @@ package main
 
 import (
 	"bufio"
-	"encoding/xml"
 	"flag"
 	"fmt"
 	"image"
 	"log"
 	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
 
-	"github.com/BurntSushi/freetype-go/freetype/truetype"
-	"github.com/BurntSushi/xgb/xproto"
-	"github.com/BurntSushi/xgbutil"
-	"github.com/BurntSushi/xgbutil/ewmh"
-	"github.com/BurntSushi/xgbutil/xevent"
-	"github.com/BurntSushi/xgbutil/xgraphics"
-	"github.com/BurntSushi/xgbutil/xinerama"
-	"github.com/BurntSushi/xgbutil/xwindow"
+	"github.com/jezek/xgb/xproto"
+	"github.com/jezek/xgbutil"
+	"github.com/jezek/xgbutil/ewmh"
+	"github.com/jezek/xgbutil/xevent"
+	"github.com/jezek/xgbutil/xgraphics"
+	"github.com/jezek/xgbutil/xinerama"
+	"github.com/jezek/xgbutil/xwindow"
+	"golang.org/x/image/font"
+	"golang.org/x/image/math/fixed"
 )
 
 // fatal is a helper function to call when something terribly wrong
@@ -83,86 +82,6 @@ const (
 	TOP
 )
 
-// Font stores font definition along with it's loaded truetype struct.
-type Font struct {
-	Path string
-	Size float64
-	Font *truetype.Font
-}
-
-func (f *Font) String() string {
-	return fmt.Sprintf("%s:%f", f.Path, f.Size)
-}
-
-// FindFontError is returned when FindFontPath fails to fint any usable fonts.
-type FindFontError struct {
-	Action string
-	Orig   error
-}
-
-func (f FindFontError) Error() string {
-	return fmt.Sprintf("[fontconfig] Could not %s. Got `%s`", f.Action, f.Orig)
-}
-
-type FontFinder func() (string, error)
-
-// FindFontPath tries hard to find any usable font(s) in the system.
-// It does so by parsing fontconfig configuration and looking through
-// the specified directories for anything that could possibly by used
-// by freetype font parser.
-func FindFontPath() (string, error) {
-	log.Print("Trying to find usable font")
-
-	fontsConf, err := os.Open("/etc/fonts/fonts.conf")
-	if err != nil {
-		return "", FindFontError{"open file", err}
-	}
-	defer fontsConf.Close()
-
-	result := struct {
-		Dirs []string `xml:"dir"`
-	}{}
-	decoder := xml.NewDecoder(fontsConf)
-	if err := decoder.Decode(&result); err != nil {
-		return "", FindFontError{"decode file", err}
-	}
-
-	for _, dir := range result.Dirs {
-		files, err := filepath.Glob(fmt.Sprintf("%s/TTF/*.ttf", dir))
-		if err == nil && files != nil {
-			return files[0], nil
-		}
-	}
-	return "", FindFontError{"find font files", err}
-}
-
-// FontError is returned when NewFont fails to create a font.
-type FontError struct {
-	Path string
-	Orig error
-}
-
-func (f FontError) Error() string {
-	return fmt.Sprintf("Could not open font `%s`. Got `%s`", f.Path, f.Orig)
-}
-
-type FontCreator func(path string, size float64) (*Font, error)
-
-// NewFont opens a font file and parses it with truetype engine.
-func NewFont(path string, size float64) (*Font, error) {
-	fontReader, err := os.Open(path)
-	if err != nil {
-		return nil, FontError{path, err}
-	}
-	defer fontReader.Close()
-
-	font, err := xgraphics.ParseFont(fontReader)
-	if err != nil {
-		return nil, FontError{path, err}
-	}
-	return &Font{path, size, font}, nil
-}
-
 // Geometry stores bars geometry on the screen (or actually monitor).
 type Geometry struct {
 	Width  uint16
@@ -183,7 +102,7 @@ type Bar struct {
 	Foreground *xgraphics.BGRA
 	Background *xgraphics.BGRA
 	Colors     []*xgraphics.BGRA
-	Fonts      []*Font
+	Fonts      fonts
 
 	heads xinerama.Heads
 }
@@ -193,7 +112,7 @@ type Bar struct {
 // deals with dynamic geometry changes.
 func NewBar(
 	X *xgbutil.XUtil, geometries []*Geometry, position Position,
-	fg uint64, bg uint64, fonts []*Font,
+	fg uint64, bg uint64, fonts fonts,
 ) *Bar {
 	heads, err := xinerama.PhysicalHeads(X)
 	fatal(err)
@@ -325,10 +244,10 @@ func (b *Bar) Draw(text []*TextPiece) {
 		imgs[i].For(func(x, y int) xgraphics.BGRA { return *b.Background })
 	}
 
-	xsl := make([]int, len(b.Windows))
-	xsr := make([]int, len(b.Windows))
+	xsl := make([]fixed.Int26_6, len(b.Windows))
+	xsr := make([]fixed.Int26_6, len(b.Windows))
 	for i := range xsr {
-		xsr[i] = int(b.Geometries[i].Width)
+		xsr[i] = fixed.I(int(b.Geometries[i].Width))
 	}
 	for _, piece := range text {
 		if piece.Background == nil {
@@ -339,11 +258,11 @@ func (b *Bar) Draw(text []*TextPiece) {
 		}
 
 		if piece.Font > uint(len(b.Fonts))-1 {
-			log.Printf("Invalid font index `%d`, using 0", piece.Font)
+			log.Printf("Invalid font index `%d`, using `0`", piece.Font)
 			piece.Font = 0
 		}
-		font := b.Fonts[piece.Font]
-		width, _ := xgraphics.Extents(font.Font, font.Size, piece.Text)
+		pFont := b.Fonts[piece.Font]
+		width := font.MeasureString(pFont, piece.Text)
 
 		screens := []uint{}
 		if piece.Screens == nil {
@@ -366,8 +285,11 @@ func (b *Bar) Draw(text []*TextPiece) {
 				xs = xsr[screen] - width
 			}
 
+			// XXX Avoid the roundings?
+			// Would waterfall inside xgraphics and create problems with adhering
+			// to the image.Image interface.
 			subimg := imgs[screen].SubImage(image.Rect(
-				xs, 0, xs+width, int(b.Geometries[screen].Height),
+				xs.Round(), 0, (xs + width).Round(), int(b.Geometries[screen].Height),
 			))
 			if subimg == nil {
 				log.Printf(
@@ -380,12 +302,7 @@ func (b *Bar) Draw(text []*TextPiece) {
 
 			subximg.For(func(x, y int) xgraphics.BGRA { return *piece.Background })
 
-			xsNew, _, err := subximg.Text(
-				xs, 0, piece.Foreground, font.Size, font.Font, piece.Text,
-			)
-			if err != nil {
-				log.Print(err) // TODO: Better logging
-			}
+			xsNew := subximg.Text(fixed.Point26_6{X: xs, Y: 0}, piece.Foreground, pFont, piece.Text).X
 
 			if piece.Align == LEFT {
 				xsl[screen] = xsNew
@@ -408,71 +325,22 @@ func (b *Bar) Draw(text []*TextPiece) {
 	}
 }
 
-// ParseFonts parses a list of stringified font definitions
-// into a list of Font structures.
-// Also handles all kinds of bad input and tries hard to recover from it.
-// Returns error only if not a single usable font is found in the end.
-func ParseFonts(
-	fontSpecs []string, createFont FontCreator, findFont FontFinder,
-) (fonts []*Font, err error) {
-	fonts = make([]*Font, 0, len(fontSpecs))
-	fontSize := 12.0
-	for _, fontSpec := range fontSpecs {
-		fontSpecSplit := strings.Split(fontSpec, ":")
-		fontPath := fontSpecSplit[0]
-		fontSize = 12.0
-		if len(fontSpecSplit) < 2 {
-			log.Printf("No font size for `%s`, using `12`", fontPath)
-		} else {
-			fontSizeStr := fontSpecSplit[1]
-			possibleFontSize, err := strconv.ParseFloat(fontSizeStr, 32)
-			if err == nil {
-				fontSize = possibleFontSize
-			} else {
-				log.Printf(
-					"Invalid font size `%s` for `%s`, using `12`. Got `%s`",
-					fontSizeStr, fontPath, err,
-				)
-			}
-		}
-		font, err := createFont(fontPath, fontSize)
-		if err != nil {
-			log.Print(err)
-		} else {
-			fonts = append(fonts, font)
-		}
-	}
-	if len(fonts) == 0 {
-		fontPath, err := findFont()
-		if err != nil {
-			return fonts, err
-		}
+type fonts []font.Face
 
-		font, err := createFont(fontPath, fontSize)
-		if err != nil {
-			return fonts, err
-		}
-		fonts = append(fonts, font)
-	}
-	return
-}
-
-type Fonts []*Font
-
-func (f *Fonts) String() string {
+func (f *fonts) String() string {
 	str := make([]string, len(*f))
 	for i, f := range *f {
-		str[i] = f.String()
+		str[i] = fmt.Sprintf("%v", f)
 	}
 	return fmt.Sprintf("%q", strings.Join(str, ","))
 }
 
-func (f *Fonts) Set(value string) error {
-	fonts, err := ParseFonts(strings.Split(value, ","), NewFont, FindFontPath)
-	if err != nil {
-		return fmt.Errorf("No usable fonts found")
+func (f *fonts) Set(value string) error {
+	names := strings.Split(value, ",")
+	for _, name := range names {
+		font := findFont(name)
+		*f = append(*f, font)
 	}
-	*f = append(*f, fonts...)
 	return nil
 }
 
@@ -524,11 +392,15 @@ func main() {
 	flag.Lookup("fg").DefValue = "0xFFFFFFFF"
 	bgColor := flag.Uint64("bg", 0xFF000000, "Background color (0xAARRGGBB)")
 	flag.Lookup("bg").DefValue = "0xFF000000"
-	var fonts Fonts
+	var fonts fonts
 	flag.Var(&fonts, "fonts", "Comma separated list of fonts in form of path[:size]")
 	var geometries Geometries
 	flag.Var(&geometries, "geometries", "Comma separated list of monitor geometries (<w>x<h>+<x>+<y>), for <w> and <h>, 0 means 100%")
 	flag.Parse()
+
+	if len(fonts) < 1 {
+		fonts = append(fonts, findFontFallback("", 12))
+	}
 
 	position := TOP
 	if *bottom {

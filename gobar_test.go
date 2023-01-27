@@ -23,115 +23,11 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"testing"
 )
-
-func newFontMock(path string, size float64) (*Font, error) {
-	if strings.Contains(path, "invalid") {
-		return nil, errors.New("new font mock")
-	}
-	return &Font{Path: path, Size: size}, nil
-}
-
-func findFontMockFactory(value string) FontFinder {
-	return func() (string, error) {
-		if strings.Contains(value, "wrong") {
-			return "", errors.New("find font mock")
-		}
-		return value, nil
-	}
-}
-
-var ParseFontsTests = []struct {
-	findFontValue string
-	input         []string
-	fontExpected  []*Font
-	logExpected   []string
-	errExpected   error
-}{
-	{
-		"mock1", []string{"test1:14"},
-		[]*Font{{Path: "test1", Size: 14}},
-		[]string{""}, nil,
-	},
-	{
-		"mock1", []string{"test1:14", "test2:10"},
-		[]*Font{{Path: "test1", Size: 14}, {Path: "test2", Size: 10}},
-		[]string{""}, nil,
-	},
-	{
-		"mock1", []string{"test1"},
-		[]*Font{{Path: "test1", Size: 12}},
-		[]string{"No font size for `test1`, using `12`"}, nil,
-	},
-	{
-		"mock1", []string{"test1:size1"},
-		[]*Font{{Path: "test1", Size: 12}},
-		[]string{"Invalid font size `size1` for `test1`, using `12`. Got"}, nil,
-	},
-	{
-		"mock1", []string{"test1:14", "invalid1:10"},
-		[]*Font{{Path: "test1", Size: 14}},
-		[]string{"new font mock"}, nil,
-	},
-	{
-		"mock1", []string{"invalid1:10"},
-		[]*Font{{Path: "mock1", Size: 10}},
-		[]string{"new font mock"}, nil,
-	},
-	{
-		"mock1", []string{"invalid1"},
-		[]*Font{{Path: "mock1", Size: 12}},
-		[]string{"No font size for `invalid1`, using `12`", "new font mock"}, nil,
-	},
-	{
-		"wrong1", []string{"invalid1:12"},
-		[]*Font{},
-		[]string{"new font mock"}, errors.New("find font mock"),
-	},
-	{
-		"invalid1", []string{"invalid1:12"},
-		[]*Font{},
-		[]string{"new font mock"}, errors.New("new font mock"),
-	},
-}
-
-func TestParseFonts(t *testing.T) {
-	var stderr bytes.Buffer
-	log.SetOutput(&stderr)
-
-	for i, tt := range ParseFontsTests {
-		findFontMock := findFontMockFactory(tt.findFontValue)
-
-		actual, err := ParseFonts(tt.input, newFontMock, findFontMock)
-
-		assertEqual(t, tt.input, tt.fontExpected, actual, "ParseFonts", i)
-		assertEqualError(t, tt.errExpected, err, "ParseFonts", i)
-
-		for _, logExpected := range tt.logExpected {
-			logActual, err := stderr.ReadString('\n')
-			if err != nil && err.Error() != "EOF" {
-				t.Errorf("ERROR `%s` READING STDERR", err)
-			}
-
-			if len(logActual) > 0 {
-				gotIdx := strings.Index(logActual, ". Got")
-				if gotIdx == -1 {
-					logActual = logActual[20 : len(logActual)-1]
-				} else {
-					logActual = logActual[20 : gotIdx+5]
-				}
-			}
-
-			assertEqual(t, tt.input, logActual, logExpected, "ParseFonts", i)
-		}
-	}
-}
 
 func TestGeometriesSet(t *testing.T) {
 	tests := []struct {

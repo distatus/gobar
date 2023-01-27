@@ -1,5 +1,6 @@
 // gobar
-// Copyright (C) 2014 Karol 'Kenji Takahashi' Woźniak
+//
+// Copyright (C) 2014,2022 Karol 'Kenji Takahashi' Woźniak
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files (the "Software"),
@@ -28,7 +29,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/BurntSushi/xgbutil/xgraphics"
+	"github.com/jezek/xgbutil/xgraphics"
 )
 
 // Align defines text piece alignment on the screen.
@@ -39,7 +40,7 @@ const (
 	RIGHT
 )
 
-// Type EndScan is an artifical Error.
+// EndScan is an artifical Error.
 // Raised when parser should stop scanning.
 type EndScan struct{}
 
