@@ -42,9 +42,10 @@ If there are less geometries than monitors, last geometry is used for subsequent
 
 **--fonts** takes comma separated list of fonts.
 
-Each font element is in form of `<ttf file path>[:<font size>]`.
+Each font element is in form of `<font name or path>[:<font size>]`.
 
-If omitted, or if incorrect path is specified, defaults to whatever it can find in fontconfig configuration.
+If omitted, or if incorrect path is specified, defaults to whatever it can find in the system.
+If nothing suitable is found, falls back to `Liberation Mono` that is always bundled with the Go font library.
 
 If `<font size>` part is omitted or incorrect, defaults to `12`.
 
